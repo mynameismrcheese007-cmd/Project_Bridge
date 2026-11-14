@@ -9,11 +9,13 @@ import { TextAreaField } from '../components/FormControls';
 import { ProjectBulletin } from '../components/ProjectBulletin';
 import { SkeletonList } from '../components/ui/Skeleton';
 import { Icon } from '../components/Icon';
+import { useRevealChildren } from '../motion';
 
 const MEMBER_LABELS = { INVITED: 'Invited', ACCEPTED: 'Editor', DECLINED: 'Declined' } as const;
 
 /** FR03: progress entries, milestone status and the team. None of these need Admin review. */
 export function ProjectManage() {
+  const sections = useRevealChildren<HTMLElement>();
   const { id = '' } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -95,7 +97,7 @@ export function ProjectManage() {
   const removed = ws.project.status === 'REMOVED';
 
   return (
-    <main className="page page-narrow stack">
+    <main className="page page-narrow stack" ref={sections}>
       <Link to="/my-projects" className="back-link">
         <Icon name="arrow-left" /> My projects
       </Link>

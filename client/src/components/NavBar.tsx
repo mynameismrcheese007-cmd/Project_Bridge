@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
+import { currentTheme, setTheme, type Theme } from '../lib/theme';
 
 export function NavBar() {
   const { user, logout } = useAuth();
@@ -30,6 +31,13 @@ export function NavBar() {
     };
   }, [user?.id, location.pathname]);
 
+  const [theme, setThemeState] = useState<Theme>(currentTheme);
+  function toggleTheme() {
+    const next: Theme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    setThemeState(next);
+  }
+
   async function handleLogout() {
     await logout();
     navigate('/login');
@@ -50,6 +58,9 @@ export function NavBar() {
           {user?.role === 'ADMIN' && <NavLink to="/admin">Admin</NavLink>}
         </nav>
         <div className="nav-actions">
+          <button type="button" className="btn btn-ghost nav-theme" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} aria-pressed={theme === 'dark'}>
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+          </button>
           {user ? (
             <>
               {user.role !== 'ADMIN' && (

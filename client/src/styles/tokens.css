@@ -115,8 +115,7 @@
 /*
  * Dark mode: "ink". A designed palette, not an inversion: surfaces step up from the ink, the banks
  * keep their cool and warm casts, and the signal is lifted so it still reads on dark.
- * It applies only when chosen (data-theme="dark"); following the system setting is switched on
- * once every page has moved onto these tokens.
+ * It applies when chosen with the toggle (data-theme="dark"), or from the system setting below.
  */
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -157,6 +156,50 @@
 
   --shadow-low: 0 1px 0 rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.4);
   --shadow-high: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 36px -12px rgb(0 0 0 / 0.7);
+}
+
+/* The same dark palette when the system asks for it and the person has not chosen light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+  
+    --ink: #eef2f5;
+    --ink-2: #c3ced8;
+    --ink-3: #93a3b3;
+    --paper: #0a1b2a;
+    --paper-2: #0e2233;
+    --surface: #132b40;
+    --line: rgb(238 242 245 / 0.16);
+    --line-strong: rgb(238 242 245 / 0.34);
+    --grid: rgb(238 242 245 / 0.05);
+  
+    --bank-student: #17344b;
+    --bank-student-line: #2c5270;
+    --bank-industry: #3a2e21;
+    --bank-industry-line: #6a5438;
+  
+    --signal: #ff6a3d;
+    --signal-strong: #ff8358;
+    --signal-text: #ff9a76;
+    --signal-soft: #4a2217;
+    --on-signal: #1a0a04;
+  
+    --ok: #7fd3a0;
+    --ok-soft: #173a27;
+    --warn: #f0c466;
+    --warn-soft: #3d3011;
+    --danger: #ff9d91;
+    --danger-soft: #4a1c17;
+    --note: #9cc4ea;
+    --note-soft: #173450;
+  
+    --control: #eef2f5;
+    --control-hover: #ffffff;
+    --on-control: #0a1b2a;
+  
+    --shadow-low: 0 1px 0 rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.4);
+    --shadow-high: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 36px -12px rgb(0 0 0 / 0.7);
+  }
 }
 
 /*

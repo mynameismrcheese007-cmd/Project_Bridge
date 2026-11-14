@@ -1,4 +1,4 @@
-/** Light ("paper") or dark ("ink"), remembered on this device. The palette is in styles/tokens.css. */
+/** Light ("paper") or dark ("ink"). The palettes are in styles/tokens.css. */
 export type Theme = 'light' | 'dark';
 
 const KEY = 'projectbridge-theme';
@@ -8,13 +8,16 @@ export function storedTheme(): Theme | null {
     const value = window.localStorage.getItem(KEY);
     return value === 'light' || value === 'dark' ? value : null;
   } catch {
-    // Private windows and blocked storage: carry on with the default.
+    // Private windows and blocked storage: carry on with the system setting.
     return null;
   }
 }
 
+/** What is showing now: the person's choice if they made one, otherwise the system setting. */
 export function currentTheme(): Theme {
-  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  const chosen = document.documentElement.dataset.theme;
+  if (chosen === 'light' || chosen === 'dark') return chosen;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 export function setTheme(theme: Theme): void {

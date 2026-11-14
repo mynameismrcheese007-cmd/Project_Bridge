@@ -5,9 +5,11 @@ import { useAuth } from '../auth/AuthContext';
 import { Alert } from '../components/Alert';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { SkeletonList } from '../components/ui/Skeleton';
+import { useRevealChildren } from '../motion';
 
 /** FR02–FR04: the owner's and editor's list of projects, invitations, hide and delete. */
 export function MyProjects() {
+  const sections = useRevealChildren<HTMLElement>();
   const { user } = useAuth();
   const location = useLocation();
   const [items, setItems] = useState<MyProject[] | null>(null);
@@ -70,7 +72,7 @@ export function MyProjects() {
   const canCreate = user?.role === 'UPLOADER' || user?.role === 'PROFESSIONAL';
 
   return (
-    <main className="page stack">
+    <main className="page stack" ref={sections}>
       <header className="row space-between">
         <div className="page-header" style={{ marginBottom: 0 }}>
           <h1>My projects</h1>

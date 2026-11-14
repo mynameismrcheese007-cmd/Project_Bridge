@@ -5,12 +5,14 @@ import { useAuth } from '../auth/AuthContext';
 import { OfferQueue, RemovedProjects, RoleRequestQueue, UserAccess } from '../components/AdminModeration';
 import { ReportQueue } from '../components/ReportQueue';
 import { ReviewQueue } from '../components/ReviewQueue';
+import { useRevealChildren } from '../motion';
 
 /**
  * Always asks the server, even when the UI thinks the user is not an Admin.
  * This shows during the demo that the API itself refuses access.
  */
 export function AdminArea() {
+  const sections = useRevealChildren<HTMLElement>();
   const { user, loading } = useAuth();
   const [result, setResult] = useState<{ ok: boolean; text: string; status?: number } | null>(null);
 
@@ -28,7 +30,7 @@ export function AdminArea() {
   }, [loading, user?.id]);
 
   return (
-    <main className="page stack">
+    <main className="page stack" ref={sections}>
       <header className="page-header">
         <h1>Admin dashboard</h1>
         <p className="muted">Moderation, roles and account controls.</p>

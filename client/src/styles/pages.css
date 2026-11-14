@@ -403,3 +403,98 @@
   font-family: var(--font-mono);
   font-size: var(--step--2);
 }
+
+/* ---------- Colours the older stylesheet wrote by hand, moved onto tokens so dark mode holds ---------- */
+.alert,
+.alert-error,
+.alert-success,
+.alert-info {
+  color: var(--ink);
+}
+.alert-icon {
+  color: var(--surface);
+}
+.cta {
+  border-color: var(--line-strong);
+  background: var(--surface);
+}
+.cta-icon {
+  background: var(--ink);
+  color: var(--surface);
+}
+.chip-removable {
+  border-color: var(--bank-student-line);
+  background: var(--bank-student);
+  color: var(--ink);
+}
+.chip-toggle.on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+.hint-card,
+.review-note,
+.bulletin-hint {
+  border: var(--hairline) solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--note-soft);
+  color: var(--ink);
+}
+.diff-old {
+  background: var(--danger-soft);
+  color: var(--ink);
+}
+.diff-new {
+  background: var(--ok-soft);
+  color: var(--ink);
+}
+.status-icon.ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.status-icon.denied {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.danger-text {
+  color: var(--danger);
+}
+.nav-theme .icon {
+  width: 18px;
+  height: 18px;
+}
+.password-toggle {
+  color: var(--ink-3);
+}
+.password-rules li.ok {
+  color: var(--ok);
+}
+.stat-tile {
+  border: var(--hairline) solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface);
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+}
+.stat-label,
+.suggest-kind,
+.suggest-head {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.list-row {
+  border-bottom-color: var(--line);
+}
+.audit-list code {
+  font-family: var(--font-mono);
+  background: var(--paper-2);
+}
+.deck {
+  background: var(--paper);
+  color: var(--ink);
+}

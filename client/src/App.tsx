@@ -1,24 +1,29 @@
+import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router';
 import { NavBar } from './components/NavBar';
 import { PageTransition } from './motion';
 import { RequireAuth } from './components/RequireAuth';
-import { Account } from './pages/Account';
-import { AdminArea } from './pages/AdminArea';
+import { SkeletonList } from './components/ui/Skeleton';
 import { Explore } from './pages/Explore';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Login } from './pages/Login';
-import { Messages } from './pages/Messages';
 import { MyProjects } from './pages/MyProjects';
 import { NotFound } from './pages/NotFound';
-import { Offers } from './pages/Offers';
 import { Notifications } from './pages/Notifications';
-import { ProjectEditor } from './pages/ProjectEditor';
-import { ProjectManage } from './pages/ProjectManage';
 import { ProjectPage } from './pages/ProjectPage';
 import { ProjectPreview } from './pages/ProjectPreview';
 import { Register } from './pages/Register';
 import { Requests } from './pages/Requests';
 import { ResetPassword } from './pages/ResetPassword';
+
+// Pages most visitors never open are loaded when first visited, keeping the first load small.
+const Account = lazy(() => import('./pages/Account').then((m) => ({ default: m.Account })));
+const AdminArea = lazy(() => import('./pages/AdminArea').then((m) => ({ default: m.AdminArea })));
+const Messages = lazy(() => import('./pages/Messages').then((m) => ({ default: m.Messages })));
+const Offers = lazy(() => import('./pages/Offers').then((m) => ({ default: m.Offers })));
+const ProjectEditor = lazy(() => import('./pages/ProjectEditor').then((m) => ({ default: m.ProjectEditor })));
+const ProjectManage = lazy(() => import('./pages/ProjectManage').then((m) => ({ default: m.ProjectManage })));
+
 
 export function App() {
   return (
@@ -29,6 +34,13 @@ export function App() {
       <NavBar />
       <div id="content">
         <PageTransition>
+        <Suspense
+          fallback={
+            <main className="page page-narrow">
+              <SkeletonList rows={3} label="Loading page…" />
+            </main>
+          }
+        >
         <Routes>
           <Route path="/" element={<Explore />} />
           <Route path="/register" element={<Register />} />
@@ -123,6 +135,7 @@ export function App() {
           <Route path="/admin" element={<AdminArea />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
         </PageTransition>
       </div>
     </>

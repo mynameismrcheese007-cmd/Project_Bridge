@@ -539,3 +539,24 @@ select.input:focus {
 .hero h1 {
   font-size: var(--step-4);
 }
+
+/* With six links plus the actions, the bar needs two rows below desktop width. */
+@media (max-width: 960px) {
+  .navbar-inner {
+    height: auto;
+    flex-wrap: wrap;
+    padding-block: var(--space-2);
+    row-gap: var(--space-1);
+  }
+  .nav-links {
+    order: 3;
+    flex-basis: 100%;
+    overflow-x: auto;
+  }
+  .nav-links a {
+    white-space: nowrap;
+  }
+  .nav-actions {
+    margin-left: auto;
+  }
+}

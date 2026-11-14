@@ -7,6 +7,7 @@ import { FormField } from '../components/FormField';
 import { useToast } from '../components/ui/Toast';
 import { SkeletonList } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import { useRevealChildren } from '../motion';
 
 const REVIEW_BADGE: Record<MyOffer['reviewStatus'], { label: string; badge: string }> = {
   PENDING: { label: 'In review', badge: 'badge-navy' },
@@ -17,6 +18,7 @@ const EMPTY = { projectId: '', title: '', skills: '', type: 'FIXED', compensatio
 
 /** FR11: a Professional's own paid offers, and the form to post one on a project they own or edit. */
 export function Offers() {
+  const sections = useRevealChildren<HTMLElement>();
   const [offers, setOffers] = useState<MyOffer[] | null>(null);
   const [projects, setProjects] = useState<MyProject[]>([]);
   const [form, setForm] = useState(EMPTY);
@@ -70,7 +72,7 @@ export function Offers() {
   }
 
   return (
-    <main className="page page-narrow stack">
+    <main className="page page-narrow stack" ref={sections}>
       <header className="page-header">
         <h1>My paid offers</h1>
         <p className="muted">Offer paid work on a project you own or edit. ProjectBridge does not process payments; you arrange them directly.</p>

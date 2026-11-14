@@ -5,6 +5,7 @@ import { Alert } from '../components/Alert';
 import { TextDialog } from '../components/TextDialog';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
+import { useRevealChildren } from '../motion';
 
 const ROLE_BADGE: Record<Role, string> = {
   UPLOADER: 'badge-accent',
@@ -16,6 +17,7 @@ const COVER_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const COVER_MAX_BYTES = 2 * 1024 * 1024;
 
 export function Account() {
+  const sections = useRevealChildren<HTMLElement>();
   const { user } = useAuth();
   const [profile, setProfile] = useState<MyProfile | null | undefined>(undefined);
 
@@ -32,7 +34,7 @@ export function Account() {
   const status = user.status.charAt(0) + user.status.slice(1).toLowerCase();
 
   return (
-    <main className="page page-narrow stack">
+    <main className="page page-narrow stack" ref={sections}>
       <section className="card profile-card">
         <CoverPhoto
           url={profile?.coverUrl ?? null}
