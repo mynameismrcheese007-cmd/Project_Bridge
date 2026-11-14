@@ -10,11 +10,13 @@ import { ProjectStory } from './ProjectStory';
 import { ScreenshotGallery } from './ScreenshotGallery';
 import { ReportButton } from './ReportButton';
 import { useToast } from './ui/Toast';
+import { useRevealChildren } from '../motion';
+import { Icon } from './Icon';
 
 function Locked({ children }: { children: React.ReactNode }) {
   return (
     <p className="locked-note">
-      <span aria-hidden="true">🔒</span> {children}
+      <Icon name="lock" /> {children}
     </p>
   );
 }
@@ -36,7 +38,7 @@ function ShareButton({ id }: { id: string }) {
   return (
     <>
       <button type="button" className="btn btn-ghost btn-sm" onClick={copy}>
-        {state === 'copied' ? '✓ Link copied' : 'Share'}
+        <Icon name="share" /> Share
       </button>
       {state === 'shown' && <input className="input" readOnly value={link} aria-label="Share link" onFocus={(e) => e.target.select()} />}
     </>
@@ -89,10 +91,11 @@ function SocialShare({ id }: { id: string }) {
  * browser, so this only decides how to explain what is missing.
  */
 export function ProjectView({ project, tier, canEdit = false }: { project: ProjectDetail; tier: ViewerTier; canEdit?: boolean }) {
+  const sections = useRevealChildren<HTMLElement>();
   const overviewTruncated = tier === 'UPLOADER' && project.overview?.endsWith('…');
 
   return (
-    <article className="project-view stack">
+    <article className="project-view stack" ref={sections}>
       <header className="card card-pad stack project-view-head">
         <div className="project-meta">
           <span className="badge badge-amber">{STAGE_LABELS[project.stage] ?? project.stage}</span>
@@ -112,7 +115,7 @@ export function ProjectView({ project, tier, canEdit = false }: { project: Proje
         <div className="row">
           {project.demoUrl && (
             <a className="btn btn-primary" href={project.demoUrl} target="_blank" rel="noopener noreferrer">
-              Open demo ↗
+              Open demo <Icon name="arrow-up-right" />
             </a>
           )}
           {tier !== 'GUEST' && <ContactButton projectId={project.id} name="the team" label="Contact the team" />}

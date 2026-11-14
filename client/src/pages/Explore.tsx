@@ -7,6 +7,7 @@ import { CardSkeleton } from '../components/CardSkeleton';
 import { GuestCapPrompt } from '../components/GuestCapPrompt';
 import { ProjectCard } from '../components/ProjectCard';
 import { FilterSidebar } from '../components/FilterSidebar';
+import { AnimatedNumber, useFlipList } from '../motion';
 
 const Landing = lazy(() => import('../landing/Landing'));
 
@@ -45,6 +46,8 @@ export function Explore() {
   // Open beside the cards on a wide screen; closed on a phone, so projects come first.
   const [filtersOpen, setFiltersOpen] = useState(() => window.matchMedia('(min-width: 861px)').matches);
 
+  const { ref: grid, capture } = useFlipList<HTMLDivElement>([items]);
+
   const loadPage = useCallback(
     async (next: number, replace: boolean) => {
       setLoading(true);
@@ -54,6 +57,8 @@ export function Explore() {
           ? `/projects/search?${new URLSearchParams({ q, tags: tags.join(','), page: String(next) })}`
           : `/projects/feed?page=${next}&sort=${user ? sort : 'default'}`;
         const res = await api<FeedPage | SearchPage>(path);
+        // Before the list changes: remember where the cards are, so the ones that stay can glide.
+        if (replace) capture();
         setItems((prev) => (replace ? res.items : [...prev, ...res.items]));
         setPage(next);
         setTier(res.tier);
@@ -69,7 +74,7 @@ export function Explore() {
         setLoading(false);
       }
     },
-    [searching, q, tags, sort, user],
+    [searching, q, tags, sort, user, capture],
   );
 
   // Reload from the first page whenever the viewer or the search changes.
@@ -124,7 +129,7 @@ export function Explore() {
       {searching && total !== null && !firstLoad && (
         <div className="row space-between results-bar" role="status">
           <span>
-            {total} {total === 1 ? 'project' : 'projects'} matching {filterText}
+            <AnimatedNumber value={total} /> {total === 1 ? 'project' : 'projects'} matching {filterText}
           </span>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => search('', [])}>
             Clear filters
@@ -159,7 +164,7 @@ export function Explore() {
           </span>
         </div>
       ) : items.length > 0 ? (
-        <div className="grid">
+        <div className="grid" ref={grid}>
           {items.map((p) => (
             <ProjectCard key={p.id} project={p} />
           ))}

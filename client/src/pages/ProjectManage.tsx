@@ -8,6 +8,7 @@ import { FormField } from '../components/FormField';
 import { TextAreaField } from '../components/FormControls';
 import { ProjectBulletin } from '../components/ProjectBulletin';
 import { SkeletonList } from '../components/ui/Skeleton';
+import { Icon } from '../components/Icon';
 
 const MEMBER_LABELS = { INVITED: 'Invited', ACCEPTED: 'Editor', DECLINED: 'Declined' } as const;
 
@@ -96,7 +97,7 @@ export function ProjectManage() {
   return (
     <main className="page page-narrow stack">
       <Link to="/my-projects" className="back-link">
-        ← My projects
+        <Icon name="arrow-left" /> My projects
       </Link>
       <header className="page-header">
         <h1>{ws.project.title}</h1>

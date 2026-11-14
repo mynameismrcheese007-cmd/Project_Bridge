@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDialogMotion } from '../motion';
+import { Icon } from './Icon';
 
 interface Shot {
   id: string;
@@ -28,10 +29,10 @@ export function ScreenshotGallery({ title, shots }: { title: string; shots: Shot
         {shots.length > 1 && (
           <div className="row gallery-arrows">
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => scroll(-1)} disabled={edges.start} aria-label="Previous screenshots">
-              ←
+              <Icon name="arrow-left" />
             </button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => scroll(1)} disabled={edges.end} aria-label="More screenshots">
-              →
+              <Icon name="arrow-right" />
             </button>
           </div>
         )}
@@ -64,19 +65,19 @@ function Lightbox({ title, shots, start, onClose }: { title: string; shots: Shot
   return (
     <dialog ref={ref} className="lightbox" onCancel={onCancel} aria-label={`${title} screenshots`}>
       <button type="button" className="lightbox-close" onClick={requestClose} aria-label="Close">
-        ✕
+        <Icon name="close" />
       </button>
       <img src={shots[index].url} alt={`${title} screenshot ${index + 1}`} />
       {shots.length > 1 && (
         <div className="lightbox-nav">
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIndex(index - 1)} disabled={index === 0}>
-            ← Back
+            <Icon name="arrow-left" /> Back
           </button>
           <span>
             {index + 1} / {shots.length}
           </span>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIndex(index + 1)} disabled={index === last}>
-            Next →
+            Next <Icon name="arrow-right" />
           </button>
         </div>
       )}

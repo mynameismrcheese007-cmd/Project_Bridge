@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { STAGE_LABELS, type ProjectCard as Card } from '../api';
 import { Avatar } from './Avatar';
+import { Icon } from './Icon';
 
 // Cover gradients; the first tag picks one so related projects look alike.
 const COVERS = [
@@ -21,7 +22,7 @@ export function coverFor(project: Pick<Card, 'tags' | 'title'>): string {
 
 export function ProjectCard({ project }: { project: Card }) {
   return (
-    <article className="card project-card">
+    <article className="card project-card" data-flip-id={project.id}>
       <div className={`project-cover${project.thumbnailUrl ? ' has-image' : ''}`} style={{ background: coverFor(project) }} aria-hidden="true">
         {project.thumbnailUrl ? (
           <img src={project.thumbnailUrl} alt="" />
@@ -67,8 +68,12 @@ export function ProjectCard({ project }: { project: Card }) {
             <span>By {project.owner.name}</span>
             {project.likeCount !== undefined && (
               <span className="engagement-counts" aria-label={`${project.likeCount} likes, ${project.commentCount ?? 0} comments`}>
-                <span aria-hidden="true">♥ {project.likeCount}</span>
-                <span aria-hidden="true">💬 {project.commentCount ?? 0}</span>
+                <span aria-hidden="true">
+                  <Icon name="heart" /> {project.likeCount}
+                </span>
+                <span aria-hidden="true">
+                  <Icon name="comment" /> {project.commentCount ?? 0}
+                </span>
               </span>
             )}
           </div>

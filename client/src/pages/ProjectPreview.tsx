@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router';
 import { api, ApiError, STATUS_LABELS, type ProjectDetail, type ProjectStatus } from '../api';
 import { Alert } from '../components/Alert';
 import { ProjectView } from '../components/ProjectView';
+import { Icon } from '../components/Icon';
 
 interface Preview {
   project: ProjectDetail;
@@ -26,7 +27,7 @@ export function ProjectPreview() {
     <main className="page page-narrow stack">
       <div className="row space-between">
         <Link to={`/projects/${id}/edit`} className="back-link">
-          ← Back to editing
+          <Icon name="arrow-left" /> Back to editing
         </Link>
         {data && <span className={`badge ${STATUS_LABELS[data.status].badge}`}>{STATUS_LABELS[data.status].label}</span>}
       </div>

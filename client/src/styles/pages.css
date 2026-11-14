@@ -126,3 +126,280 @@
     padding-inline: var(--space-3);
   }
 }
+
+/* ---------- The match moment ---------- */
+.match {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-toast);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.match-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-7);
+  border: var(--hairline) solid var(--line-strong);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  box-shadow: var(--shadow-high);
+}
+.match-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.match-node {
+  display: inline-flex;
+}
+.match-span {
+  width: 160px;
+  height: 48px;
+  overflow: visible;
+}
+.match-line {
+  fill: none;
+  stroke: var(--signal);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.match-pulse {
+  fill: none;
+  stroke: var(--signal);
+  stroke-width: 2;
+}
+.match-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  text-align: center;
+}
+.match-text .annotation {
+  color: var(--signal-text);
+}
+
+/* ---------- Explore and project cards ---------- */
+.explore-layout {
+  gap: var(--space-6);
+}
+.filters-label,
+.bulletin-label {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  font-weight: 500;
+  letter-spacing: var(--tracking-mono);
+  color: var(--ink-3);
+}
+.filters-tag input,
+.completion-edit input[type='range'] {
+  accent-color: var(--ink);
+}
+.filters-tag.on {
+  color: var(--ink);
+}
+.filters-tag-count {
+  font-family: var(--font-mono);
+}
+.project-card {
+  overflow: hidden;
+  transition:
+    box-shadow var(--dur-fade) var(--ease-out),
+    border-color var(--dur-fade) var(--ease-out);
+}
+.project-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-high);
+  transform: none;
+}
+/* A fixed shape, so the feed does not shift as covers load. */
+.project-cover {
+  height: auto;
+  aspect-ratio: 16 / 6;
+  border-bottom: var(--hairline) solid var(--line);
+}
+.project-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.project-title {
+  font-size: var(--step-1);
+}
+.project-title a {
+  color: var(--ink);
+}
+.project-footer {
+  border-top-color: var(--line);
+  color: var(--ink-3);
+}
+.engagement-counts {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+}
+.engagement-counts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.results-bar {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+}
+.suggest-list {
+  box-shadow: var(--shadow-high);
+  animation: field-error-in var(--dur-fade) var(--ease-out);
+}
+.suggest-item.active {
+  background: var(--paper-2);
+}
+
+/* ---------- Project page ---------- */
+.project-view-head h1 {
+  font-size: var(--step-5);
+}
+.lead {
+  font-size: var(--step-1);
+  color: var(--ink-2);
+}
+.locked-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: var(--hairline) dashed var(--line-strong);
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--ink-2);
+}
+/* The two banks: the problem sits on the student side, the answer on the span between. */
+.story-problem {
+  background: var(--bank-industry);
+}
+.story-problem .story-badge {
+  color: var(--warn);
+}
+.story-solution {
+  background: var(--bank-student);
+}
+.story-solution .story-badge {
+  color: var(--ink);
+}
+.story-arrow {
+  color: var(--signal);
+}
+.story-section-icon {
+  background: var(--bank-student);
+  color: var(--ink);
+  border-radius: var(--r-2);
+}
+.feature {
+  border-color: var(--line);
+  border-radius: var(--r-2);
+}
+.feature-check {
+  background: transparent;
+  box-shadow: inset 0 0 0 var(--hairline) var(--ok);
+  color: var(--ok);
+}
+.link-button,
+.story-full summary {
+  color: var(--signal-text);
+}
+.gallery-item {
+  border-color: var(--line);
+  border-radius: var(--r-3);
+  background: var(--paper-2);
+}
+.stage-track li.past::before,
+.stage-track li.current::before,
+.stage-track li.past .stage-dot {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.stage-track li.past .stage-dot {
+  color: var(--surface);
+}
+.stage-track li.current .stage-dot {
+  border-color: var(--signal);
+  color: var(--ink);
+  box-shadow: 0 0 0 4px var(--signal-soft);
+}
+.stage-dot {
+  font-family: var(--font-mono);
+}
+.stage-dot .icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.2;
+}
+.bulletin-pie-center strong {
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+}
+.like-btn[aria-pressed='true'] {
+  background: var(--signal-soft);
+  border-color: var(--signal);
+  color: var(--signal-text);
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-3);
+}
+.back-link:hover {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* ---------- Messages ---------- */
+.chat-item.active {
+  background: var(--paper-2);
+  box-shadow: inset 2px 0 0 var(--signal);
+}
+.chat-item:hover {
+  background: var(--paper-2);
+}
+/* Theirs on the cool bank, mine on the warm one. */
+.bubble {
+  border: var(--hairline) solid var(--line);
+  border-radius: var(--r-3) var(--r-3) var(--r-3) var(--r-1);
+  background: var(--bank-student);
+}
+.bubble-mine {
+  border-radius: var(--r-3) var(--r-3) var(--r-1) var(--r-3);
+  background: var(--bank-industry);
+}
+.bubble time {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+}
+/* A message that arrived while you were here: one pass of the signal colour, then it settles. */
+.bubble-new {
+  animation: bubble-sweep 1.6s var(--ease-out);
+}
+@keyframes bubble-sweep {
+  from {
+    box-shadow: inset 0 0 0 2px var(--signal);
+  }
+  to {
+    box-shadow: inset 0 0 0 2px transparent;
+  }
+}
+
+/* ---------- Notifications ---------- */
+.notice-unread {
+  background: var(--signal-soft);
+}
+.notice-unread .notice-dot {
+  background: var(--signal);
+}
+.notice time {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+}

@@ -6,6 +6,7 @@ import { Alert } from '../components/Alert';
 import { FormField } from '../components/FormField';
 import { CheckboxField, SelectField, TagInput, TextAreaField } from '../components/FormControls';
 import { coverFor } from '../components/ProjectCard';
+import { Icon } from '../components/Icon';
 
 const LIMITS = { title: 120, summary: 200, problem: 2000, overview: 5000 };
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -252,7 +253,9 @@ export function ProjectEditor() {
     return (
       <main className="page page-narrow">
         {message && <Alert tone={message.tone}>{message.text}</Alert>}
-        <Link to="/my-projects">← My projects</Link>
+        <Link to="/my-projects">
+          <Icon name="arrow-left" /> My projects
+        </Link>
       </main>
     );
   }
@@ -262,7 +265,7 @@ export function ProjectEditor() {
   return (
     <main className="page page-narrow stack">
       <Link to="/my-projects" className="back-link">
-        ← My projects
+        <Icon name="arrow-left" /> My projects
       </Link>
       <header className="page-header">
         <h1>{id ? 'Edit project' : 'New project'}</h1>

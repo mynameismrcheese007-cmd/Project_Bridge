@@ -4,6 +4,7 @@ import { api, ApiError, type AppNotification } from '../api';
 import { Alert } from '../components/Alert';
 import { SkeletonList } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import { useStaggerList } from '../motion';
 
 /** Where a notice leads, if anywhere the user can open. */
 function linkFor(n: AppNotification): string | null {
@@ -62,6 +63,7 @@ export function Notifications() {
   }
 
   const unread = items.some((n) => !n.isRead);
+  const list = useStaggerList<HTMLUListElement>(items.map((n) => n.id));
 
   return (
     <main className="page page-narrow stack">
@@ -83,11 +85,11 @@ export function Notifications() {
       )}
 
       {items.length > 0 && (
-        <ul className="notice-list card">
+        <ul className="notice-list card" ref={list}>
           {items.map((n) => {
             const to = linkFor(n);
             return (
-              <li key={n.id} className={`notice${n.isRead ? '' : ' notice-unread'}`}>
+              <li key={n.id} data-motion-id={n.id} className={`notice${n.isRead ? '' : ' notice-unread'}`}>
                 <span className="notice-dot" aria-label={n.isRead ? undefined : 'Unread'} />
                 <div className="notice-main">
                   {to ? (

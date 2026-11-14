@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useDialogMotion } from '../motion';
 import { Link } from 'react-router';
 import { api, ApiError, MILESTONE_LABELS, MILESTONE_STATUSES, STAGE_LABELS, STAGES, type MilestoneStatus, type Workspace } from '../api';
+import { AnimatedNumber } from '../motion';
+import { Icon } from './Icon';
 
 interface Milestone {
   id: string;
@@ -72,7 +74,9 @@ function AccomplishedChart({ value, counts, total, size }: { value: Accomplished
         <circle cx="100" cy="100" r="52" fill="var(--surface)" />
       </svg>
       <div className="bulletin-pie-center">
-        <strong>{value.percent}%</strong>
+        <strong>
+          <AnimatedNumber value={value.percent} suffix="%" />
+        </strong>
         <span>done</span>
       </div>
     </div>
@@ -137,7 +141,7 @@ function StageTrack({ stage, onPick, busy }: { stage: string; onPick?: (stage: s
         const inner = (
           <>
             <span className="stage-dot" aria-hidden="true">
-              {i < current ? '✓' : i + 1}
+              {i < current ? <Icon name="check" /> : i + 1}
             </span>
             <span className="stage-name">{STAGE_LABELS[s]}</span>
           </>
@@ -263,7 +267,7 @@ function StageOnly({ stage }: { stage: string }) {
         <StageTrack stage={stage} />
       </div>
       <p className="locked-note">
-        <span aria-hidden="true">🔒</span> <Link to="/login">Sign in</Link> to see the milestones and how much is accomplished.
+        <Icon name="lock" /> <Link to="/login">Sign in</Link> to see the milestones and how much is accomplished.
       </p>
     </section>
   );
@@ -330,11 +334,11 @@ function FullBulletin({ title, stage: initialStage, milestones: initialMilestone
         <div className="row">
           {projectId && (
             <button type="button" className={`btn btn-sm ${editing ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEditing(!editing)} aria-pressed={editing}>
-              {editing ? '✓ Done editing' : '✎ Edit bulletin'}
+              <Icon name={editing ? 'check' : 'edit'} /> {editing ? 'Done editing' : 'Edit bulletin'}
             </button>
           )}
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPresenting(true)}>
-            ▶ Present
+            <Icon name="play" /> Present
           </button>
         </div>
       </div>
@@ -468,7 +472,7 @@ function BulletinPresentation({ title, stage, milestones, progress, counts, acco
       <header className="deck-head">
         <span className="muted">{title} · Project bulletin</span>
         <button type="button" className="btn btn-ghost btn-sm" onClick={requestClose}>
-          Close ✕
+          Close <Icon name="close" />
         </button>
       </header>
       <div className="deck-slide" aria-live="polite">
@@ -477,13 +481,13 @@ function BulletinPresentation({ title, stage, milestones, progress, counts, acco
       </div>
       <footer className="deck-foot">
         <button type="button" className="btn btn-secondary" onClick={() => setIndex(index - 1)} disabled={index === 0}>
-          ← Back
+          <Icon name="arrow-left" /> Back
         </button>
         <span className="muted">
           {index + 1} / {slides.length}
         </span>
         <button type="button" className="btn btn-primary" onClick={() => setIndex(index + 1)} disabled={index === last}>
-          Next →
+          Next <Icon name="arrow-right" />
         </button>
       </footer>
     </dialog>

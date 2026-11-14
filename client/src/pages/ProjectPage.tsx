@@ -6,6 +6,7 @@ import { Alert } from '../components/Alert';
 import { GuestCapPrompt } from '../components/GuestCapPrompt';
 import { ProjectView } from '../components/ProjectView';
 import { Skeleton } from '../components/ui/Skeleton';
+import { Icon } from '../components/Icon';
 
 type State =
   | { kind: 'loading' }
@@ -53,7 +54,7 @@ export function ProjectPage() {
   return (
     <main className="page page-narrow">
       <Link to="/" className="back-link">
-        ← Back to Explore
+        <Icon name="arrow-left" /> Back to Explore
       </Link>
       {state.kind === 'loading' && (
         <div className="skeleton-stack" role="status" aria-busy="true">

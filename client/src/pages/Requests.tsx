@@ -8,6 +8,7 @@ import { useToast } from '../components/ui/Toast';
 import { TabPanel, Tabs } from '../components/ui/Tabs';
 import { SkeletonList } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import { MatchMoment } from '../components/MatchMoment';
 
 type Box = 'incoming' | 'outgoing';
 
@@ -27,6 +28,7 @@ export function Requests() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const toast = useToast();
+  const [match, setMatch] = useState<{ from: string; to: string } | null>(null);
 
   const load = useCallback(async (which: Box) => {
     setLoading(true);
@@ -50,7 +52,9 @@ export function Requests() {
     setError('');
     try {
       await api(`/messaging/requests/${id}/${action}`, { method: 'POST' });
-      toast(action === 'accept' ? 'Accepted. A private conversation has been opened between you.' : action === 'decline' ? 'Request declined.' : 'Request withdrawn.');
+      const accepted = action === 'accept' ? items.find((r) => r.id === id) : undefined;
+      if (accepted?.from && user) setMatch({ from: accepted.from.name, to: user.name });
+      else toast(action === 'accept' ? 'Accepted. A private conversation has been opened between you.' : action === 'decline' ? 'Request declined.' : 'Request withdrawn.');
       await load(box);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong.');
@@ -78,6 +82,7 @@ export function Requests() {
           { id: 'outgoing', label: 'Sent' },
         ]}
       />
+      {match && <MatchMoment from={match.from} to={match.to} onDone={() => setMatch(null)} />}
       <TabPanel name="requests" value={box} className="stack">
 
       {error && <Alert tone="error">{error}</Alert>}
@@ -119,7 +124,7 @@ export function Requests() {
                 <div className="row">
                   {box === 'incoming' ? (
                     <>
-                      <button type="button" className="btn btn-primary btn-sm" disabled={busyId === r.id || !canAccept} onClick={() => act(r.id, 'accept')}>
+                      <button type="button" className="btn btn-signal btn-sm" disabled={busyId === r.id || !canAccept} onClick={() => act(r.id, 'accept')}>
                         Accept
                       </button>
                       <button type="button" className="btn btn-secondary btn-sm" disabled={busyId === r.id} onClick={() => act(r.id, 'decline')}>

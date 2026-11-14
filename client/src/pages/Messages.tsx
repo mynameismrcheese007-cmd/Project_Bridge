@@ -6,6 +6,8 @@ import { Alert } from '../components/Alert';
 import { Avatar } from '../components/Avatar';
 import { ReportButton } from '../components/ReportButton';
 import { Skeleton, SkeletonList } from '../components/ui/Skeleton';
+import { DURATION, EASE, prefersReducedMotion } from '../motion';
+import { gsap, useGSAP } from '../lib/gsap';
 
 const errorText = (err: unknown, fallback: string) => (err instanceof ApiError ? err.message : fallback);
 
@@ -73,6 +75,34 @@ function Thread({ id, canSend, onSent }: { id: string; canSend: boolean; onSent:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const bottom = useRef<HTMLDivElement>(null);
+  const thread = useRef<HTMLDivElement>(null);
+  const seen = useRef<Set<string> | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+
+  // The first page appears as it is. After that, only messages not shown before move: mine from
+  // the right, theirs from the left with a highlight, and theirs are announced politely.
+  useGSAP(
+    () => {
+      if (state !== 'ready') return;
+      const ids = messages.map((m) => m.id);
+      if (seen.current === null) {
+        seen.current = new Set(ids);
+        return;
+      }
+      const fresh = messages.filter((m) => !seen.current!.has(m.id));
+      for (const m of fresh) seen.current.add(m.id);
+      if (fresh.length === 0 || fresh.length > 5) return;
+      const incoming = fresh.filter((m) => !m.mine);
+      if (incoming.length) setAnnouncement(`${incoming.length === 1 ? 'New message' : `${incoming.length} new messages`} from ${other?.name ?? 'them'}`);
+      const els = fresh.map((m) => thread.current?.querySelector(`[data-message-id="${m.id}"]`)).filter(Boolean);
+      if (prefersReducedMotion()) {
+        gsap.from(els, { autoAlpha: 0, duration: DURATION.fade, clearProps: 'opacity,visibility' });
+        return;
+      }
+      gsap.from(els, { autoAlpha: 0, x: (_, el) => ((el as HTMLElement).classList.contains('bubble-mine') ? 16 : -16), duration: DURATION.enter, ease: EASE.enter, stagger: 0.06, clearProps: 'transform,opacity,visibility' });
+    },
+    { scope: thread, dependencies: [messages, state], revertOnUpdate: false },
+  );
 
   // The server sends newest first; the thread shows oldest first.
   const load = useCallback(
@@ -142,7 +172,10 @@ function Thread({ id, canSend, onSent }: { id: string; canSend: boolean; onSent:
         <strong>{other?.name ?? '…'}</strong>
         <ReportButton targetType="CONVERSATION" targetId={id} label="Report conversation" />
       </header>
-      <div className="chat-messages">
+      <p className="visually-hidden" role="status" aria-live="polite">
+        {announcement}
+      </p>
+      <div className="chat-messages" ref={thread}>
         {nextCursor && (
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => load(nextCursor)} style={{ alignSelf: 'center' }}>
             Load older messages
@@ -158,7 +191,7 @@ function Thread({ id, canSend, onSent }: { id: string; canSend: boolean; onSent:
         )}
         {state === 'ready' && messages.length === 0 && <p className="muted">No messages yet. Say hello.</p>}
         {messages.map((m) => (
-          <div key={m.id} className={`bubble${m.mine ? ' bubble-mine' : ''}`}>
+          <div key={m.id} data-message-id={m.id} className={`bubble${m.mine ? ' bubble-mine' : ''}${!m.mine && seen.current && !seen.current.has(m.id) ? ' bubble-new' : ''}`}>
             <p>{m.body ?? <em>This message cannot be shown.</em>}</p>
             <time className="small" dateTime={m.createdAt}>
               {new Date(m.createdAt).toLocaleString()}

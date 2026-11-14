@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useRef } from 'react';
 import { api, ApiError, type ProjectComment, type ProjectDetail } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Alert } from './Alert';
@@ -6,6 +6,9 @@ import { Avatar } from './Avatar';
 import { ContactButton } from './ContactButton';
 import { TextAreaField } from './FormControls';
 import { ReportButton } from './ReportButton';
+import { EASE, prefersReducedMotion } from '../motion';
+import { gsap, useGSAP } from '../lib/gsap';
+import { Icon } from './Icon';
 
 const MAX = 500;
 const errorText = (err: unknown) => (err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
@@ -37,11 +40,19 @@ export function Engagement({ project }: { project: ProjectDetail }) {
     }
   }
 
+  const section = useRef<HTMLElement>(null);
+  const { contextSafe } = useGSAP({ scope: section });
+  /** A like joins a professional to a project, so the button answers with the "lock" ease. */
+  const pulse = contextSafe(() => {
+    if (!prefersReducedMotion()) gsap.fromTo('.like-btn', { scale: 0.88 }, { scale: 1, duration: 0.5, ease: EASE.lock, clearProps: 'transform' });
+  });
+
   const toggleLike = () =>
     run(async () => {
       const res = await api<{ liked: boolean; likeCount: number }>(`/projects/${project.id}/like`, { method: liked ? 'DELETE' : 'PUT' });
       setLiked(res.liked);
       setLikeCount(res.likeCount);
+      if (res.liked) pulse();
     });
 
   const post = (e: FormEvent) => {
@@ -71,7 +82,7 @@ export function Engagement({ project }: { project: ProjectDetail }) {
     });
 
   return (
-    <section className="card card-pad stack" aria-labelledby="engagement-title">
+    <section ref={section} className="card card-pad stack" aria-labelledby="engagement-title">
       <div className="row space-between">
         <h2 id="engagement-title">Discussion</h2>
         <button
@@ -82,7 +93,7 @@ export function Engagement({ project }: { project: ProjectDetail }) {
           disabled={!canAct || busy}
           title={canAct ? undefined : 'Only active Professionals can like projects.'}
         >
-          {liked ? '♥ Liked' : '♡ Like'} · {likeCount}
+          <Icon name="heart" filled={liked} /> {liked ? 'Liked' : 'Like'} · {likeCount}
         </button>
       </div>
 

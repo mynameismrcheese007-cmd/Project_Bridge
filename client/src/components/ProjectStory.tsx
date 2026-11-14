@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Icon as LineIcon } from './Icon';
 
 /**
  * Turns the plain problem and overview text into something people scan rather than read:
@@ -156,7 +157,7 @@ export function ProjectStory({ problem, overview, truncated }: { problem?: strin
         )}
         {problem && (leadHead || story.lists.length > 0) && (
           <div className="story-arrow" aria-hidden="true">
-            →
+            <LineIcon name="arrow-right" />
           </div>
         )}
         {(leadHead || story.lists.length > 0) && (
@@ -233,7 +234,7 @@ export function ProjectStory({ problem, overview, truncated }: { problem?: strin
       </details>
       {truncated && (
         <p className="locked-note">
-          <span aria-hidden="true">🔒</span> Professionals see the full problem, overview and team.
+          <LineIcon name="lock" /> Professionals see the full problem, overview and team.
         </p>
       )}
     </section>
