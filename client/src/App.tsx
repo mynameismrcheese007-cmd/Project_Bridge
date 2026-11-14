@@ -7,13 +7,8 @@ import { SkeletonList } from './components/ui/Skeleton';
 import { Explore } from './pages/Explore';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Login } from './pages/Login';
-import { MyProjects } from './pages/MyProjects';
 import { NotFound } from './pages/NotFound';
-import { Notifications } from './pages/Notifications';
-import { ProjectPage } from './pages/ProjectPage';
-import { ProjectPreview } from './pages/ProjectPreview';
 import { Register } from './pages/Register';
-import { Requests } from './pages/Requests';
 import { ResetPassword } from './pages/ResetPassword';
 
 // Pages most visitors never open are loaded when first visited, keeping the first load small.
@@ -22,6 +17,11 @@ const AdminArea = lazy(() => import('./pages/AdminArea').then((m) => ({ default:
 const Messages = lazy(() => import('./pages/Messages').then((m) => ({ default: m.Messages })));
 const Offers = lazy(() => import('./pages/Offers').then((m) => ({ default: m.Offers })));
 const ProjectEditor = lazy(() => import('./pages/ProjectEditor').then((m) => ({ default: m.ProjectEditor })));
+const MyProjects = lazy(() => import('./pages/MyProjects').then((m) => ({ default: m.MyProjects })));
+const Notifications = lazy(() => import('./pages/Notifications').then((m) => ({ default: m.Notifications })));
+const ProjectPage = lazy(() => import('./pages/ProjectPage').then((m) => ({ default: m.ProjectPage })));
+const ProjectPreview = lazy(() => import('./pages/ProjectPreview').then((m) => ({ default: m.ProjectPreview })));
+const Requests = lazy(() => import('./pages/Requests').then((m) => ({ default: m.Requests })));
 const ProjectManage = lazy(() => import('./pages/ProjectManage').then((m) => ({ default: m.ProjectManage })));
 
 

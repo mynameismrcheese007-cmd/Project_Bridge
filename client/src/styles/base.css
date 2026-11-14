@@ -134,6 +134,12 @@ code {
 
 /* Holds the landing sections' place while they load, so the feed below does not jump. */
 .landing-fallback {
-  min-height: min(92vh, 880px);
+  min-height: 100vh;
   background: #0b1d2e;
+}
+.auth-wait {
+  min-height: 100vh;
+}
+[hidden] {
+  display: none !important;
 }

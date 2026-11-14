@@ -9,7 +9,8 @@ import { ProjectCard } from '../components/ProjectCard';
 import { FilterSidebar } from '../components/FilterSidebar';
 import { AnimatedNumber, useFlipList } from '../motion';
 
-const Landing = lazy(() => import('../landing/Landing'));
+const loadLanding = () => import('../landing/Landing');
+const Landing = lazy(loadLanding);
 
 type SortOption = 'default' | 'recent' | 'interaction';
 const SORTS: Array<{ value: SortOption; label: string }> = [
@@ -100,6 +101,10 @@ export function Explore() {
   const filterText = [q && `“${q}”`, tags.length > 0 && `tags ${tags.join(' + ')}`].filter(Boolean).join(' with ');
 
   const guest = !authLoading && !user;
+  // Fetch the landing sections while the sign-in check is still running, so a guest does not wait twice.
+  useEffect(() => {
+    if (authLoading) void loadLanding();
+  }, [authLoading]);
 
   return (
     <>
@@ -109,7 +114,10 @@ export function Explore() {
           <Landing />
         </Suspense>
       )}
-    <main className="page" id="feed">
+      {/* Until we know whether this is a guest, hold the screen: showing the feed first and then
+          sliding the landing in above it would make the whole page jump. */}
+      {authLoading && <div className="auth-wait" aria-hidden="true" />}
+    <main className="page" id="feed" hidden={authLoading}>
       <section className="hero">
         <p className="annotation">{guest ? 'Span 03 / The projects' : 'Explore'}</p>
         {guest ? <h2 className="hero-title">Explore the projects</h2> : <h1>Discover university projects</h1>}

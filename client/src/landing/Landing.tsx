@@ -63,7 +63,9 @@ export default function Landing() {
           .timeline({ defaults: { ease: EASE.travel } })
           .from('.span-stroke', { drawSVG: '0%', duration: DURATION.draw, stagger: { amount: 0.5 } })
           .from('.span-node', { scale: 0, autoAlpha: 0, transformOrigin: '50% 50%', duration: 0.4, ease: EASE.lock, stagger: 0.04 }, '-=0.45')
-          .from('.span-label, .landing-copy > :not(h1)', { autoAlpha: 0, y: 10, duration: 0.5, ease: EASE.enter, stagger: STAGGER.list, clearProps: 'transform,opacity,visibility' }, '<');
+          .from('.span-label', { autoAlpha: 0, y: 10, duration: 0.5, ease: EASE.enter, stagger: STAGGER.list, clearProps: 'transform,opacity,visibility' }, '<')
+          // The words come first and are never held back by the drawing: they are what people came to read.
+          .from('.landing-copy > :not(h1)', { autoAlpha: 0, y: 10, duration: 0.4, ease: EASE.enter, stagger: STAGGER.list, clearProps: 'transform,opacity,visibility' }, 0);
 
         // On scroll: cables connect matching nodes. The scroll position is the timeline.
         gsap.from('.span-link', {
