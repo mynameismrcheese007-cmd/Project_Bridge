@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from './Avatar';
+import { Icon } from './Icon';
 import { Logo } from './Logo';
 
 export function NavBar() {
@@ -53,11 +54,11 @@ export function NavBar() {
             <>
               {user.role !== 'ADMIN' && (
                 <Link to="/projects/new" className="btn btn-primary nav-new">
-                  + New project
+                  <Icon name="plus" /> New project
                 </Link>
               )}
               <Link to="/notifications" className="btn btn-ghost nav-bell" aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}>
-                <span aria-hidden="true">🔔</span>
+                <Icon name="bell" />
                 {unread > 0 && <span className="nav-bell-count">{unread > 99 ? '99+' : unread}</span>}
               </Link>
               <Link to="/account" className="nav-user" aria-label={`Your account (${user.name})`}>

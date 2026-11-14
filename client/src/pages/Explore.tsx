@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { api, ApiError, type FeedPage, type ProjectCard as Card, type SearchPage } from '../api';
 import { useAuth } from '../auth/AuthContext';
@@ -7,6 +7,8 @@ import { CardSkeleton } from '../components/CardSkeleton';
 import { GuestCapPrompt } from '../components/GuestCapPrompt';
 import { ProjectCard } from '../components/ProjectCard';
 import { FilterSidebar } from '../components/FilterSidebar';
+
+const Landing = lazy(() => import('../landing/Landing'));
 
 type SortOption = 'default' | 'recent' | 'interaction';
 const SORTS: Array<{ value: SortOption; label: string }> = [
@@ -92,10 +94,20 @@ export function Explore() {
   const firstLoad = loading && items.length === 0;
   const filterText = [q && `“${q}”`, tags.length > 0 && `tags ${tags.join(' + ')}`].filter(Boolean).join(' with ');
 
+  const guest = !authLoading && !user;
+
   return (
-    <main className="page">
+    <>
+      {/* Guests get the landing sections above the feed; they are loaded on their own, so signed-in pages stay lean. */}
+      {guest && (
+        <Suspense fallback={<div className="landing-fallback" aria-hidden="true" />}>
+          <Landing />
+        </Suspense>
+      )}
+    <main className="page" id="feed">
       <section className="hero">
-        <h1>Discover university projects</h1>
+        <p className="annotation">{guest ? 'Span 03 / The projects' : 'Explore'}</p>
+        {guest ? <h2 className="hero-title">Explore the projects</h2> : <h1>Discover university projects</h1>}
         <p>From semester projects to real-world possibilities. Browse what students are building and find teams to support.</p>
         {tier && <span className="badge badge-accent">{TIER_NOTES[tier]}</span>}
       </section>
@@ -192,5 +204,6 @@ export function Explore() {
         </div>
       </div>
     </main>
+    </>
   );
 }

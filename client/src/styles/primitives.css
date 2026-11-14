@@ -494,3 +494,48 @@ select.input:focus {
     stroke-dashoffset: -16;
   }
 }
+
+/* ---------- Nav bar ---------- */
+.navbar {
+  background: var(--surface);
+  border-bottom: var(--hairline) solid var(--line);
+  box-shadow: none;
+}
+.nav-links a {
+  color: var(--ink-2);
+  border-radius: var(--r-2);
+}
+.nav-links a:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.nav-links a.active {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--ink);
+  border-radius: 0;
+}
+.nav-bell .icon {
+  width: 20px;
+  height: 20px;
+}
+.nav-bell-count {
+  background: var(--signal);
+  color: var(--on-signal);
+  font-family: var(--font-mono);
+}
+
+/* ---------- Page header ---------- */
+.hero .annotation,
+.page-header .annotation {
+  margin-bottom: var(--space-1);
+}
+.hero-title {
+  font-family: var(--font-display);
+  font-size: var(--step-4);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+}
+.hero h1 {
+  font-size: var(--step-4);
+}

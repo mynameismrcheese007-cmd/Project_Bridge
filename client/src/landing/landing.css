@@ -1,0 +1,240 @@
+/*
+ * The landing sections. They are always on ink, whatever the theme, so the palette is set here
+ * rather than taken from the page tokens.
+ */
+.landing {
+  --l-ink: #0b1d2e;
+  --l-ink-2: #10283d;
+  --l-paper: #f6f3ec;
+  --l-dim: #9fb0c0;
+  --l-line: rgb(246 243 236 / 0.22);
+  --l-line-strong: rgb(246 243 236 / 0.6);
+  --l-signal: #ff6a3d;
+  color: var(--l-paper);
+  background: var(--l-ink);
+}
+.landing .annotation {
+  color: var(--l-dim);
+}
+.landing-inner {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding-inline: var(--page-gutter);
+}
+
+/* ---------- The Span ---------- */
+.landing-hero {
+  position: relative;
+  padding-block: var(--space-7) var(--space-6);
+  overflow: hidden;
+  /* A quiet 12-column grid, like drafting paper. */
+  background-image:
+    repeating-linear-gradient(to right, rgb(246 243 236 / 0.045) 0 1px, transparent 1px calc(100% / 12)),
+    radial-gradient(120% 80% at 50% 0%, var(--l-ink-2), var(--l-ink) 70%);
+}
+/* Light grain, so the ink is a surface and not a flat fill. */
+.landing-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}
+.landing-hero .landing-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.landing-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.landing h1 {
+  color: var(--l-paper);
+  max-width: 22ch;
+  /* Sized so the headline and the bridge share the first screen. */
+  font-size: clamp(2.6rem, 1.5rem + 4.6vw, 5.4rem);
+  font-weight: 800;
+  /* Room for descenders: each line is masked while it rises in. */
+  line-height: 1.08;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+.landing-lead {
+  max-width: 56ch;
+  color: var(--l-dim);
+  font-size: var(--step-1);
+}
+.landing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+.landing-ghost {
+  border-color: var(--l-line-strong);
+  background: transparent;
+  color: var(--l-paper);
+}
+.landing-ghost:hover {
+  border-color: var(--l-paper);
+  background: rgb(246 243 236 / 0.08);
+}
+.landing .btn:focus-visible {
+  outline-color: var(--l-paper);
+}
+
+.span-scene {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.span-stroke,
+.span-water {
+  fill: none;
+  stroke: var(--l-line-strong);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.span-cable {
+  stroke: var(--l-paper);
+  stroke-width: 2;
+}
+.span-hanger {
+  stroke: var(--l-line);
+  stroke-width: 1;
+}
+.span-ground {
+  stroke-width: 2;
+}
+.span-water {
+  stroke: var(--l-line);
+  stroke-dasharray: 2 10;
+}
+.span-link {
+  fill: none;
+  stroke: var(--l-signal);
+  stroke-width: 2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.span-node {
+  stroke: var(--l-ink);
+  stroke-width: 3;
+}
+.span-node-student {
+  fill: #b9d3e6;
+}
+.span-node-industry {
+  fill: #f0d7a8;
+}
+.span-label {
+  fill: var(--l-dim);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+}
+
+/* ---------- How it works ---------- */
+.how {
+  padding-block: var(--space-8);
+  border-top: var(--hairline) solid var(--l-line);
+  background: var(--l-ink);
+}
+.how-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-7);
+  align-items: center;
+}
+.how-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.how h2 {
+  color: var(--l-paper);
+  font-family: var(--font-display);
+  font-size: var(--step-4);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+  text-wrap: balance;
+}
+.how-steps {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.how-step {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+  border-top: var(--hairline) solid var(--l-line);
+}
+.how-n {
+  color: var(--l-signal);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: var(--tracking-mono);
+  padding-top: 3px;
+}
+.how-step h3 {
+  margin: 0 0 var(--space-1);
+  color: var(--l-paper);
+  font-size: var(--step-1);
+}
+.how-step p {
+  color: var(--l-dim);
+}
+.how-diagram {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.how-diagram path {
+  fill: none;
+  stroke: var(--l-line-strong);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.how-diagram .how-signal {
+  stroke: var(--l-signal);
+  stroke-width: 2;
+}
+.how-diagram .how-node {
+  fill: var(--l-ink);
+  stroke: var(--l-paper);
+  stroke-width: 2;
+}
+.how-diagram text {
+  fill: var(--l-dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 767px) {
+  .landing-hero {
+    padding-block: var(--space-7) var(--space-6);
+  }
+  .how-inner {
+    grid-template-columns: 1fr;
+  }
+  .how-diagram {
+    order: -1;
+    max-width: 420px;
+  }
+  .span-label {
+    font-size: 22px;
+  }
+}
