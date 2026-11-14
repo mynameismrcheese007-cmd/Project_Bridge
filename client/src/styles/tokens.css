@@ -1,0 +1,196 @@
+/*
+ * ProjectBridge design tokens: "Load-Bearing Motion".
+ * Two banks and a span: student-side surfaces are cool, industry-side surfaces are warm, and the
+ * signal colour (International Orange, the paint of the Golden Gate Bridge) is kept for the places
+ * where the two sides connect.
+ *
+ * Every colour in the app comes from here. The block at the end maps the names the older
+ * stylesheet still uses onto these tokens; it goes when the last page has moved over.
+ */
+:root {
+  color-scheme: light;
+
+  /* ---- Colour: ink and paper ---- */
+  --ink: #0b1d2e;
+  --ink-2: #2b3d4f;
+  --ink-3: #5a6878;
+  --paper: #f6f3ec;
+  --paper-2: #efebe2;
+  --surface: #fffdf8;
+  --line: rgb(11 29 46 / 0.14);
+  --line-strong: rgb(11 29 46 / 0.3);
+  --grid: rgb(11 29 46 / 0.05);
+
+  /* ---- Colour: the two banks ---- */
+  --bank-student: #e8eef2;
+  --bank-student-line: #b9c9d4;
+  --bank-industry: #f3eadb;
+  --bank-industry-line: #dcc9a6;
+
+  /* ---- Colour: signal, for connections only ---- */
+  --signal: #f04e23;
+  --signal-strong: #d9431a;
+  --signal-text: #b5360f;
+  --signal-soft: #fde6dd;
+  --on-signal: #ffffff;
+
+  /* ---- Colour: status, never decoration ---- */
+  --ok: #1f6b3a;
+  --ok-soft: #dcebdd;
+  --warn: #8a5a00;
+  --warn-soft: #f6e7c3;
+  --danger: #a8281c;
+  --danger-soft: #f6ddd8;
+  --note: #1f4e79;
+  --note-soft: #dce7f0;
+
+  /* ---- Controls ---- */
+  --control: var(--ink);
+  --control-hover: #17324a;
+  --on-control: #fffdf8;
+  --focus-ring: var(--signal-strong);
+
+  /* ---- Type ---- */
+  --font-display: 'Big Shoulders Display', 'Arial Narrow', 'Helvetica Neue Condensed', sans-serif;
+  --font-ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* A modular scale (ratio about 1.2), fluid between 375px and 1536px wide. */
+  --step--2: 0.72rem;
+  --step--1: 0.84rem;
+  --step-0: 1rem;
+  --step-1: clamp(1.1rem, 1.06rem + 0.18vw, 1.2rem);
+  --step-2: clamp(1.25rem, 1.18rem + 0.32vw, 1.44rem);
+  --step-3: clamp(1.5rem, 1.38rem + 0.55vw, 1.85rem);
+  --step-4: clamp(1.9rem, 1.62rem + 1.2vw, 2.7rem);
+  --step-5: clamp(2.5rem, 1.9rem + 2.6vw, 4.2rem);
+  --step-6: clamp(3.2rem, 2rem + 5.2vw, 6.6rem);
+  --leading-tight: 1.05;
+  --leading-snug: 1.3;
+  --leading-body: 1.55;
+  --tracking-mono: 0.08em;
+
+  /* ---- Space: 4/8 base ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* ---- Shape ---- */
+  --r-1: 2px;
+  --r-2: 6px;
+  --r-3: 10px;
+  --r-pill: 999px;
+  --hairline: 1px;
+  --shadow-low: 0 1px 0 rgb(11 29 46 / 0.04), 0 1px 3px rgb(11 29 46 / 0.06);
+  --shadow-high: 0 2px 4px rgb(11 29 46 / 0.06), 0 14px 32px -10px rgb(11 29 46 / 0.22);
+
+  /* ---- Layers ---- */
+  --z-base: 1;
+  --z-sticky: 20;
+  --z-nav: 50;
+  --z-overlay: 80;
+  --z-modal: 100;
+  --z-toast: 120;
+  --z-transition: 140;
+
+  /* ---- Layout ---- */
+  --page-max: 1160px;
+  --page-gutter: clamp(16px, 4vw, 32px);
+
+  /* ---- Motion: the same numbers as src/motion/tokens.ts ---- */
+  --dur-micro: 0.18s;
+  --dur-fade: 0.25s;
+  --dur-enter: 0.6s;
+  --dur-page: 0.7s;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.87, 0, 0.13, 1);
+}
+
+/*
+ * Dark mode: "ink". A designed palette, not an inversion: surfaces step up from the ink, the banks
+ * keep their cool and warm casts, and the signal is lifted so it still reads on dark.
+ * It applies only when chosen (data-theme="dark"); following the system setting is switched on
+ * once every page has moved onto these tokens.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ink: #eef2f5;
+  --ink-2: #c3ced8;
+  --ink-3: #93a3b3;
+  --paper: #0a1b2a;
+  --paper-2: #0e2233;
+  --surface: #132b40;
+  --line: rgb(238 242 245 / 0.16);
+  --line-strong: rgb(238 242 245 / 0.34);
+  --grid: rgb(238 242 245 / 0.05);
+
+  --bank-student: #17344b;
+  --bank-student-line: #2c5270;
+  --bank-industry: #3a2e21;
+  --bank-industry-line: #6a5438;
+
+  --signal: #ff6a3d;
+  --signal-strong: #ff8358;
+  --signal-text: #ff9a76;
+  --signal-soft: #4a2217;
+  --on-signal: #1a0a04;
+
+  --ok: #7fd3a0;
+  --ok-soft: #173a27;
+  --warn: #f0c466;
+  --warn-soft: #3d3011;
+  --danger: #ff9d91;
+  --danger-soft: #4a1c17;
+  --note: #9cc4ea;
+  --note-soft: #173450;
+
+  --control: #eef2f5;
+  --control-hover: #ffffff;
+  --on-control: #0a1b2a;
+
+  --shadow-low: 0 1px 0 rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.4);
+  --shadow-high: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 36px -12px rgb(0 0 0 / 0.7);
+}
+
+/*
+ * Names used by the older stylesheet (styles.css), mapped onto the tokens above so every existing
+ * screen takes the new palette at once. Do not use these in new code.
+ */
+:root {
+  --bg: var(--paper);
+  --surface-muted: var(--paper-2);
+  --border: var(--line);
+  --border-strong: var(--line-strong);
+  --text: var(--ink);
+  --text-2: var(--ink-2);
+  --muted: var(--ink-3);
+
+  --navy: var(--ink);
+  --accent: var(--control);
+  --accent-hover: var(--control-hover);
+  --accent-soft: var(--bank-student);
+  --amber: var(--warn);
+  --amber-soft: var(--warn-soft);
+
+  --success: var(--ok);
+  --success-soft: var(--ok-soft);
+  --error: var(--danger);
+  --error-soft: var(--danger-soft);
+  --info: var(--note);
+  --info-soft: var(--note-soft);
+
+  --radius: var(--r-3);
+  --radius-sm: var(--r-2);
+  --radius-pill: var(--r-pill);
+  --shadow-1: var(--shadow-low);
+  --shadow-2: var(--shadow-high);
+  --focus: var(--focus-ring);
+  --font: var(--font-ui);
+}

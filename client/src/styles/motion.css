@@ -1,0 +1,71 @@
+/* Styles the motion layer needs. The movement itself is in src/motion. */
+
+/* The blueprint wipe between routes: a hairline with a faint wash behind it. */
+.page-transition {
+  position: relative;
+}
+.page-transition-sweep {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-transition);
+  pointer-events: none;
+  visibility: hidden;
+  border-right: var(--hairline) solid var(--signal);
+  background: linear-gradient(to right, transparent 82%, var(--grid));
+  will-change: transform;
+}
+
+/* A rule that draws itself. */
+.draw-line {
+  display: block;
+  width: 100%;
+  height: var(--hairline);
+  overflow: visible;
+}
+.draw-line line {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  fill: none;
+}
+.draw-line-vertical {
+  width: var(--hairline);
+  height: 100%;
+}
+.draw-line-signal line {
+  stroke: var(--signal);
+}
+
+/* Digits that count must not make the layout wobble. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The logo mark, on tokens so it follows the theme. */
+.logo-mark-ground {
+  fill: var(--ink);
+}
+.logo-mark-deck {
+  stroke: var(--paper);
+}
+.logo-mark-hangers {
+  stroke: var(--ink-3);
+}
+.logo-mark-span {
+  stroke: var(--signal);
+}
+
+/* Line icons take the size and colour of the text around them. */
+.icon {
+  flex: none;
+  width: 1.2em;
+  height: 1.2em;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: -0.2em;
+}
+.icon-filled {
+  fill: currentColor;
+}

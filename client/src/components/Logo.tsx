@@ -1,13 +1,13 @@
 import { Link } from 'react-router';
 
-/** Bridge mark: two pillars joined by an arch, in the brand teal. */
+/** Bridge mark: a deck on three hangers under an arch. The arch is the span, so it takes the signal colour. */
 export function LogoMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-      <rect width="32" height="32" rx="8" fill="#0f766e" />
-      <path d="M5 21c3.5-7 18.5-7 22 0" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M5 23h22" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M10 23v-4.6M16 23v-6M22 23v-4.6" stroke="#9fe0d8" strokeWidth="1.8" strokeLinecap="round" />
+      <rect className="logo-mark-ground" width="32" height="32" rx="6" />
+      <path className="logo-mark-hangers" d="M10 23v-4.6M16 23v-6M22 23v-4.6" fill="none" strokeWidth="1.6" strokeLinecap="round" />
+      <path className="logo-mark-deck" d="M5 23h22" fill="none" strokeWidth="2.2" strokeLinecap="round" />
+      <path className="logo-mark-span" d="M5 21c3.5-7 18.5-7 22 0" fill="none" strokeWidth="2.4" strokeLinecap="round" />
     </svg>
   );
 }

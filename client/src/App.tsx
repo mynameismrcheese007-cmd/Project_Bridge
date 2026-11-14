@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router';
 import { NavBar } from './components/NavBar';
+import { PageTransition } from './motion';
 import { RequireAuth } from './components/RequireAuth';
 import { Account } from './pages/Account';
 import { AdminArea } from './pages/AdminArea';
@@ -27,6 +28,7 @@ export function App() {
       </a>
       <NavBar />
       <div id="content">
+        <PageTransition>
         <Routes>
           <Route path="/" element={<Explore />} />
           <Route path="/register" element={<Register />} />
@@ -121,6 +123,7 @@ export function App() {
           <Route path="/admin" element={<AdminArea />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </PageTransition>
       </div>
     </>
   );
