@@ -7,6 +7,7 @@ import { Avatar } from '../components/Avatar';
 import { FormField } from '../components/FormField';
 import { TextAreaField } from '../components/FormControls';
 import { ProjectBulletin } from '../components/ProjectBulletin';
+import { SkeletonList } from '../components/ui/Skeleton';
 
 const MEMBER_LABELS = { INVITED: 'Invited', ACCEPTED: 'Editor', DECLINED: 'Declined' } as const;
 
@@ -84,7 +85,7 @@ export function ProjectManage() {
   if (!ws) {
     return (
       <main className="page page-narrow">
-        {message ? <Alert tone={message.tone}>{message.text}</Alert> : <p className="muted">Loading…</p>}
+        {message ? <Alert tone={message.tone}>{message.text}</Alert> : <SkeletonList rows={3} label="Loading project…" />}
       </main>
     );
   }

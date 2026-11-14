@@ -3,6 +3,7 @@ export { DrawLine } from './components/DrawLine';
 export { PageTransition } from './components/PageTransition';
 export { Reveal } from './components/Reveal';
 export { useCountUp } from './hooks/useCountUp';
+export { useDialogMotion } from './hooks/useDialogMotion';
 export { useExitTransition } from './hooks/useExitTransition';
 export { useFlipList } from './hooks/useFlipList';
 export { useMagnetic } from './hooks/useMagnetic';

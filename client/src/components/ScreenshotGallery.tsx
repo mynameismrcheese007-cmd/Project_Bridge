@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useDialogMotion } from '../motion';
 
 interface Shot {
   id: string;
@@ -48,13 +49,9 @@ export function ScreenshotGallery({ title, shots }: { title: string; shots: Shot
 }
 
 function Lightbox({ title, shots, start, onClose }: { title: string; shots: Shot[]; start: number; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null);
+  const { ref, requestClose, onCancel } = useDialogMotion(onClose);
   const [index, setIndex] = useState(start);
   const last = shots.length - 1;
-
-  useEffect(() => {
-    ref.current?.showModal();
-  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') setIndex((i) => Math.min(last, i + 1));
@@ -65,8 +62,8 @@ function Lightbox({ title, shots, start, onClose }: { title: string; shots: Shot
   }, [last]);
 
   return (
-    <dialog ref={ref} className="lightbox" onCancel={onClose} onClose={onClose} aria-label={`${title} screenshots`}>
-      <button type="button" className="lightbox-close" onClick={onClose} aria-label="Close">
+    <dialog ref={ref} className="lightbox" onCancel={onCancel} aria-label={`${title} screenshots`}>
+      <button type="button" className="lightbox-close" onClick={requestClose} aria-label="Close">
         ✕
       </button>
       <img src={shots[index].url} alt={`${title} screenshot ${index + 1}`} />

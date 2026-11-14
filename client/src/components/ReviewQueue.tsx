@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, STAGE_LABELS, type ProjectContent, type ReviewQueue as Queue } from '../api';
 import { Alert } from './Alert';
 import { TextAreaField } from './FormControls';
+import { SkeletonList } from './ui/Skeleton';
 
 const FIELD_LABELS: Record<keyof ProjectContent, string> = {
   title: 'Title',
@@ -83,7 +84,7 @@ export function ReviewQueue() {
     }
   }
 
-  if (!queue) return message ? <Alert tone={message.tone}>{message.text}</Alert> : <p className="muted">Loading review queue…</p>;
+  if (!queue) return message ? <Alert tone={message.tone}>{message.text}</Alert> : <SkeletonList rows={2} label="Loading review queue…" />;
 
   const empty = queue.submissions.length === 0 && queue.revisions.length === 0;
 

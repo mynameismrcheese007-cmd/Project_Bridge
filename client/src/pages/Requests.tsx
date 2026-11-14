@@ -4,6 +4,10 @@ import { api, ApiError, type ContactRequest } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Alert } from '../components/Alert';
 import { Avatar } from '../components/Avatar';
+import { useToast } from '../components/ui/Toast';
+import { TabPanel, Tabs } from '../components/ui/Tabs';
+import { SkeletonList } from '../components/ui/Skeleton';
+import { EmptyState } from '../components/ui/EmptyState';
 
 type Box = 'incoming' | 'outgoing';
 
@@ -22,7 +26,7 @@ export function Requests() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const toast = useToast();
 
   const load = useCallback(async (which: Box) => {
     setLoading(true);
@@ -38,17 +42,15 @@ export function Requests() {
   }, []);
 
   useEffect(() => {
-    setNotice('');
     load(box);
   }, [box, load]);
 
   async function act(id: string, action: 'accept' | 'decline' | 'withdraw') {
     setBusyId(id);
     setError('');
-    setNotice('');
     try {
       await api(`/messaging/requests/${id}/${action}`, { method: 'POST' });
-      setNotice(action === 'accept' ? 'Accepted. A private conversation has been opened between you.' : action === 'decline' ? 'Request declined.' : 'Request withdrawn.');
+      toast(action === 'accept' ? 'Accepted. A private conversation has been opened between you.' : action === 'decline' ? 'Request declined.' : 'Request withdrawn.');
       await load(box);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong.');
@@ -66,25 +68,24 @@ export function Requests() {
         <p className="muted">People who want to talk about a project. Emails are never shown; accepting opens a private conversation.</p>
       </header>
 
-      <div className="row" role="tablist" aria-label="Request lists">
-        {(['incoming', 'outgoing'] as const).map((b) => (
-          <button key={b} type="button" role="tab" aria-selected={box === b} className={`btn btn-sm ${box === b ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setBox(b)}>
-            {b === 'incoming' ? 'Received' : 'Sent'}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        name="requests"
+        label="Request lists"
+        value={box}
+        onChange={setBox}
+        items={[
+          { id: 'incoming', label: 'Received' },
+          { id: 'outgoing', label: 'Sent' },
+        ]}
+      />
+      <TabPanel name="requests" value={box} className="stack">
 
       {error && <Alert tone="error">{error}</Alert>}
-      {notice && <Alert tone="success">{notice}</Alert>}
-      {loading && (
-        <p className="muted" role="status">
-          Loading…
-        </p>
-      )}
-      {!loading && items.length === 0 && (
-        <section className="card empty">
-          <p className="muted">{box === 'incoming' ? 'No one has contacted you yet.' : 'You have not sent any requests yet.'}</p>
-        </section>
+      {loading && <SkeletonList rows={3} avatar label="Loading requests…" />}
+      {!loading && items.length === 0 && !error && (
+        <EmptyState title={box === 'incoming' ? 'No one has contacted you yet' : 'You have not sent any requests yet'} action={<Link to="/" className="btn btn-secondary btn-sm">Explore projects</Link>}>
+          {box === 'incoming' ? 'When someone wants to talk about one of your projects, their request appears here.' : 'Open a project and choose “Contact the team” to start a conversation.'}
+        </EmptyState>
       )}
 
       {!loading &&
@@ -135,6 +136,7 @@ export function Requests() {
             </article>
           );
         })}
+      </TabPanel>
     </main>
   );
 }

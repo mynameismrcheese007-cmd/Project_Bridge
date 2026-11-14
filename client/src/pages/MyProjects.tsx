@@ -4,6 +4,7 @@ import { api, ApiError, STAGE_LABELS, STATUS_LABELS, type Invite, type MyProject
 import { useAuth } from '../auth/AuthContext';
 import { Alert } from '../components/Alert';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { SkeletonList } from '../components/ui/Skeleton';
 
 /** FR02–FR04: the owner's and editor's list of projects, invitations, hide and delete. */
 export function MyProjects() {
@@ -109,9 +110,7 @@ export function MyProjects() {
       )}
 
       {items === null ? (
-        <p className="muted" role="status">
-          Loading your projects…
-        </p>
+        <SkeletonList rows={3} label="Loading your projects…" />
       ) : items.length === 0 ? (
         <section className="card empty">
           <h2>No projects yet</h2>

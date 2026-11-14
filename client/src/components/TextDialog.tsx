@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
+import { useDialogMotion } from '../motion';
 import { Alert } from './Alert';
 import { TextAreaField } from './FormControls';
 
@@ -19,12 +20,8 @@ interface Props {
 
 /** A modal with one text box, for reports, contact requests and Admin decision notes. */
 export function TextDialog({ title, intro, label, submitLabel, minLength = 1, maxLength, busy, error, done, onSubmit, onClose }: Props) {
-  const ref = useRef<HTMLDialogElement>(null);
+  const { ref, requestClose, onCancel } = useDialogMotion(onClose);
   const [text, setText] = useState('');
-
-  useEffect(() => {
-    ref.current?.showModal();
-  }, []);
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -32,13 +29,13 @@ export function TextDialog({ title, intro, label, submitLabel, minLength = 1, ma
   }
 
   return (
-    <dialog ref={ref} className="dialog card" onCancel={onClose} aria-labelledby="text-dialog-title">
+    <dialog ref={ref} className="dialog card" onCancel={onCancel} aria-labelledby="text-dialog-title">
       <div className="form">
         <h2 id="text-dialog-title">{title}</h2>
         {done ? (
           <>
             <Alert tone="success">{done}</Alert>
-            <button type="button" className="btn btn-primary" onClick={onClose} style={{ alignSelf: 'flex-start' }}>
+            <button type="button" className="btn btn-primary" onClick={requestClose} style={{ alignSelf: 'flex-start' }}>
               Close
             </button>
           </>
@@ -60,7 +57,7 @@ export function TextDialog({ title, intro, label, submitLabel, minLength = 1, ma
               <button type="submit" className="btn btn-primary" disabled={busy || text.trim().length < minLength}>
                 {busy ? 'Sending…' : submitLabel}
               </button>
-              <button type="button" className="btn btn-ghost" onClick={onClose} disabled={busy}>
+              <button type="button" className="btn btn-ghost" onClick={requestClose} disabled={busy}>
                 Cancel
               </button>
             </div>

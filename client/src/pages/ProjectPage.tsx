@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Alert } from '../components/Alert';
 import { GuestCapPrompt } from '../components/GuestCapPrompt';
 import { ProjectView } from '../components/ProjectView';
+import { Skeleton } from '../components/ui/Skeleton';
 
 type State =
   | { kind: 'loading' }
@@ -55,9 +56,20 @@ export function ProjectPage() {
         ← Back to Explore
       </Link>
       {state.kind === 'loading' && (
-        <p className="muted" role="status">
-          Loading project…
-        </p>
+        <div className="skeleton-stack" role="status" aria-busy="true">
+          <span className="visually-hidden">Loading project…</span>
+          <div className="card card-pad skeleton-stack" aria-hidden="true">
+            <Skeleton width={96} height={20} />
+            <Skeleton width="62%" height={40} />
+            <Skeleton width="90%" height={16} />
+            <Skeleton width="74%" height={16} />
+            <Skeleton width={220} height={40} />
+          </div>
+          <div className="card card-pad skeleton-stack" aria-hidden="true">
+            <Skeleton width={160} height={22} />
+            <Skeleton height={150} />
+          </div>
+        </div>
       )}
       {state.kind === 'error' && <Alert tone="error">{state.message}</Alert>}
       {state.kind === 'guest-cap' && <GuestCapPrompt limit={20} />}

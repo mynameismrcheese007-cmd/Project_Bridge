@@ -1,0 +1,496 @@
+/*
+ * Primitives: buttons, inputs, cards, badges, avatars, alerts, dialogs, tabs, toasts, skeletons and
+ * empty states. Each has hover, focus-visible, active, disabled and (where it applies) loading
+ * states. Loaded after the older stylesheet, whose rules for the same classes it replaces.
+ */
+
+/* ---------- Button ---------- */
+.btn {
+  position: relative;
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+  border: var(--hairline) solid transparent;
+  border-radius: var(--r-2);
+  font-family: var(--font-ui);
+  font-size: var(--step-0);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  white-space: nowrap;
+  user-select: none;
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    border-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+.btn:hover {
+  text-decoration: none;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-2);
+}
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--control);
+  color: var(--on-control);
+  box-shadow: none;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--control-hover);
+}
+/* Reserved for actions that join the two sides: contact, accept, apply, like. */
+.btn-signal {
+  background: var(--signal);
+  color: var(--on-signal);
+}
+.btn-signal:hover:not(:disabled) {
+  background: var(--signal-strong);
+}
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line-strong);
+  box-shadow: none;
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--paper-2);
+  border-color: var(--ink);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-2);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.btn-danger {
+  background: var(--danger);
+  color: var(--surface);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger);
+  filter: brightness(0.92);
+}
+.btn-sm {
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--step--1);
+}
+.btn-lg {
+  min-height: 48px;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--step-1);
+}
+/* Loading: the label stays in place (no layout shift) and a hairline arc turns over it. */
+.btn[data-state='loading'] {
+  color: transparent;
+  pointer-events: none;
+}
+.btn[data-state='loading']::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--on-control);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 0.7s linear infinite;
+}
+.btn-secondary[data-state='loading']::after,
+.btn-ghost[data-state='loading']::after {
+  border-color: var(--ink);
+  border-right-color: transparent;
+}
+.btn[data-state='success'] {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: var(--surface);
+}
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Badge and chip ---------- */
+/* Badges read like stamps on a drawing: squared, monospace, hairline. */
+.badge {
+  padding: 2px var(--space-2);
+  border: var(--hairline) solid var(--line);
+  border-radius: var(--r-1);
+  background: var(--paper-2);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.5;
+}
+.badge-accent {
+  background: var(--bank-student);
+  border-color: var(--bank-student-line);
+  color: var(--ink);
+}
+.badge-amber {
+  background: var(--warn-soft);
+  border-color: transparent;
+  color: var(--warn);
+}
+.badge-success {
+  background: var(--ok-soft);
+  border-color: transparent;
+  color: var(--ok);
+}
+.badge-navy {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.chip {
+  padding: 1px var(--space-2);
+  border: var(--hairline) solid var(--line);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+}
+
+/* ---------- Card ---------- */
+/* Depth comes from hairlines; a shadow appears only when a card can be picked up. */
+.card {
+  background: var(--surface);
+  border: var(--hairline) solid var(--line);
+  border-radius: var(--r-3);
+  box-shadow: none;
+}
+.card-pad {
+  padding: var(--space-5);
+}
+
+/* ---------- Avatar ---------- */
+.avatar {
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0;
+  box-shadow: 0 0 0 var(--hairline) var(--line);
+}
+
+/* ---------- Field and input ---------- */
+.field label,
+.field-label-row label {
+  font-size: var(--step--1);
+  font-weight: 600;
+  color: var(--ink);
+}
+.field-hint {
+  font-size: var(--step--1);
+  color: var(--ink-3);
+}
+/* The focus line: a signal rule that draws along the bottom edge when the field takes focus. */
+.input {
+  min-height: 42px;
+  padding: var(--space-2) var(--space-3);
+  border: var(--hairline) solid var(--line-strong);
+  border-radius: var(--r-2);
+  background-color: var(--surface);
+  background-image: linear-gradient(var(--signal), var(--signal));
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: 0% 2px;
+  color: var(--ink);
+  font: inherit;
+  transition:
+    background-size var(--dur-fade) var(--ease-out),
+    border-color var(--dur-micro) var(--ease-out);
+}
+.input::placeholder {
+  color: var(--ink-3);
+}
+.input:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+.input:focus,
+.input:focus-visible {
+  outline: none;
+  border-color: var(--ink);
+  background-size: 100% 2px;
+  box-shadow: none;
+}
+.input:disabled {
+  background-color: var(--paper-2);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+.input[aria-invalid='true'] {
+  border-color: var(--danger);
+  background-image: linear-gradient(var(--danger), var(--danger));
+  background-size: 100% 2px;
+}
+.input[aria-invalid='true']:focus {
+  box-shadow: none;
+}
+select.input {
+  background-image: none;
+}
+select.input:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.field-error {
+  color: var(--danger);
+  font-size: var(--step--1);
+  font-weight: 500;
+  animation: field-error-in var(--dur-fade) var(--ease-out);
+}
+@keyframes field-error-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.field-count {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+}
+
+/* ---------- Alert ---------- */
+.alert {
+  border: var(--hairline) solid var(--line);
+  border-left-width: 3px;
+  border-radius: var(--r-2);
+  background: var(--surface);
+  color: var(--ink);
+}
+.alert-error {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+.alert-success {
+  border-left-color: var(--ok);
+  background: var(--ok-soft);
+}
+.alert-info {
+  border-left-color: var(--note);
+  background: var(--note-soft);
+}
+
+/* ---------- Dialog ---------- */
+.dialog {
+  padding: var(--space-5);
+  border: var(--hairline) solid var(--line-strong);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-high);
+}
+.dialog::backdrop,
+.lightbox::backdrop {
+  background: rgb(6 18 29 / 0.6);
+  animation: backdrop-in var(--dur-fade) var(--ease-out);
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- Tabs ---------- */
+.tabs {
+  display: flex;
+  gap: var(--space-5);
+  border-bottom: var(--hairline) solid var(--line);
+}
+.tab {
+  position: relative;
+  padding: var(--space-2) 0 var(--space-3);
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+.tab:hover {
+  color: var(--ink);
+}
+.tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-fade) var(--ease-out);
+}
+.tab[aria-selected='true'] {
+  color: var(--ink);
+}
+.tab[aria-selected='true']::after {
+  transform: scaleX(1);
+}
+.tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+  border-radius: var(--r-1);
+}
+.tab-count {
+  margin-left: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  color: var(--ink-3);
+}
+
+/* ---------- Toast ---------- */
+.toast-region {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 240px;
+  max-width: min(420px, calc(100vw - 2 * var(--space-5)));
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--signal);
+  border-radius: var(--r-2);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 500;
+  box-shadow: var(--shadow-high);
+  pointer-events: auto;
+}
+.toast .icon {
+  color: var(--signal);
+}
+.toast-close {
+  margin-left: auto;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--r-1);
+  background: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+}
+.toast-close:hover {
+  opacity: 1;
+}
+.toast-close:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+@media (max-width: 480px) {
+  .toast-region {
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: var(--space-4);
+  }
+  .toast {
+    max-width: none;
+  }
+}
+
+/* ---------- Skeleton ---------- */
+/* Blueprint placeholders: a hairline outline with a light passing along it, sized like the real thing. */
+.skeleton {
+  border: var(--hairline) solid var(--line);
+  border-radius: var(--r-1);
+  background-color: transparent;
+  background-image: linear-gradient(100deg, transparent 35%, var(--line) 50%, transparent 65%);
+  background-size: 220% 100%;
+  animation: skeleton-pass 1.6s var(--ease-in-out) infinite;
+}
+@keyframes skeleton-pass {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+.skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ---------- Empty state ---------- */
+.empty,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-5);
+  border: var(--hairline) dashed var(--line-strong);
+  border-radius: var(--r-3);
+  background: transparent;
+  text-align: center;
+}
+.empty-state h2,
+.empty h2 {
+  font-size: var(--step-1);
+}
+.empty-state p {
+  max-width: 44ch;
+  color: var(--ink-3);
+}
+.empty-art {
+  width: 148px;
+  height: 64px;
+  overflow: visible;
+}
+.empty-art .pier {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+/* The unbuilt span: a dashed line that keeps reaching across the gap. */
+.empty-art .gap {
+  fill: none;
+  stroke: var(--signal);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 5;
+  stroke-linecap: round;
+  animation: empty-reach 2.4s linear infinite;
+}
+.empty-art .node {
+  fill: var(--surface);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+@keyframes empty-reach {
+  to {
+    stroke-dashoffset: -16;
+  }
+}

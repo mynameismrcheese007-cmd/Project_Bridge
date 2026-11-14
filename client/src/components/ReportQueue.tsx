@@ -3,6 +3,9 @@ import { Link } from 'react-router';
 import { api, ApiError, type AdminReport } from '../api';
 import { Alert } from './Alert';
 import { TextDialog } from './TextDialog';
+import { TabPanel, Tabs } from './ui/Tabs';
+import { SkeletonList } from './ui/Skeleton';
+import { EmptyState } from './ui/EmptyState';
 
 type Status = AdminReport['status'];
 
@@ -70,26 +73,23 @@ export function ReportQueue() {
     <section className="stack" aria-labelledby="reports-title">
       <div className="row space-between">
         <h2 id="reports-title">Reports</h2>
-        <div className="row" role="tablist" aria-label="Report status">
-          {(['OPEN', 'CONFIRMED', 'DISMISSED'] as const).map((s) => (
-            <button key={s} type="button" role="tab" aria-selected={status === s} className={`btn btn-sm ${status === s ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setStatus(s)}>
-              {s.charAt(0) + s.slice(1).toLowerCase()}
-            </button>
-          ))}
-        </div>
       </div>
+      <Tabs
+        name="reports"
+        label="Report status"
+        value={status}
+        onChange={setStatus}
+        items={[
+          { id: 'OPEN', label: 'Open' },
+          { id: 'CONFIRMED', label: 'Confirmed' },
+          { id: 'DISMISSED', label: 'Dismissed' },
+        ]}
+      />
+      <TabPanel name="reports" value={status} className="stack">
 
       {error && <Alert tone="error">{error}</Alert>}
-      {loading && (
-        <p className="muted" role="status">
-          Loading reports…
-        </p>
-      )}
-      {!loading && items.length === 0 && (
-        <div className="card empty">
-          <p className="muted">No {status.toLowerCase()} reports.</p>
-        </div>
-      )}
+      {loading && <SkeletonList rows={2} label="Loading reports…" />}
+      {!loading && items.length === 0 && !error && <EmptyState title={`No ${status.toLowerCase()} reports`}>Reports filed by Uploaders and Professionals appear here for a decision.</EmptyState>}
 
       {!loading &&
         items.map((r) => (
@@ -148,6 +148,8 @@ export function ReportQueue() {
             )}
           </article>
         ))}
+
+      </TabPanel>
 
       {dismissing && (
         <TextDialog

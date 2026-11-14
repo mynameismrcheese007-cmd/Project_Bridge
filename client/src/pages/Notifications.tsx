@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { api, ApiError, type AppNotification } from '../api';
 import { Alert } from '../components/Alert';
+import { SkeletonList } from '../components/ui/Skeleton';
+import { EmptyState } from '../components/ui/EmptyState';
 
 /** Where a notice leads, if anywhere the user can open. */
 function linkFor(n: AppNotification): string | null {
@@ -77,9 +79,7 @@ export function Notifications() {
 
       {error && <Alert tone="error">{error}</Alert>}
       {!loading && items.length === 0 && !error && (
-        <section className="card empty">
-          <p className="muted">You have no notifications yet.</p>
-        </section>
+        <EmptyState title="Nothing to report yet">Invitations, review decisions, comments and contact requests will appear here.</EmptyState>
       )}
 
       {items.length > 0 && (
@@ -112,11 +112,7 @@ export function Notifications() {
         </ul>
       )}
 
-      {loading && (
-        <p className="muted" role="status">
-          Loading…
-        </p>
-      )}
+      {loading && <SkeletonList rows={items.length ? 1 : 4} label="Loading notifications…" />}
       {hasMore && !loading && (
         <button type="button" className="btn btn-secondary" onClick={() => load(page + 1)} style={{ alignSelf: 'center' }}>
           Load more

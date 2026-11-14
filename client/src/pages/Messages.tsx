@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Alert } from '../components/Alert';
 import { Avatar } from '../components/Avatar';
 import { ReportButton } from '../components/ReportButton';
+import { Skeleton, SkeletonList } from '../components/ui/Skeleton';
 
 const errorText = (err: unknown, fallback: string) => (err instanceof ApiError ? err.message : fallback);
 
@@ -31,7 +32,11 @@ export function Messages() {
       {error && <Alert tone="error">{error}</Alert>}
       <div className="chat-layout">
         <nav className="card chat-list" aria-label="Conversations">
-          {conversations === null && <p className="muted chat-empty">Loading…</p>}
+          {conversations === null && (
+            <div className="chat-empty">
+              <SkeletonList rows={3} avatar label="Loading conversations…" />
+            </div>
+          )}
           {conversations?.length === 0 && (
             <p className="muted chat-empty">
               No conversations yet. Accept a request on <Link to="/requests">Requests</Link>, or contact a project team.
@@ -143,7 +148,14 @@ function Thread({ id, canSend, onSent }: { id: string; canSend: boolean; onSent:
             Load older messages
           </button>
         )}
-        {state === 'loading' && <p className="muted">Loading…</p>}
+        {state === 'loading' && (
+          <div className="skeleton-stack" role="status" aria-busy="true">
+            <span className="visually-hidden">Loading messages…</span>
+            <Skeleton width="46%" height={44} />
+            <Skeleton width="38%" height={44} style={{ alignSelf: 'flex-end' }} />
+            <Skeleton width="52%" height={44} />
+          </div>
+        )}
         {state === 'ready' && messages.length === 0 && <p className="muted">No messages yet. Say hello.</p>}
         {messages.map((m) => (
           <div key={m.id} className={`bubble${m.mine ? ' bubble-mine' : ''}`}>

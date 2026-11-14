@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
+import { useDialogMotion } from '../motion';
 import { FormField } from './FormField';
 
 interface Props {
@@ -11,12 +12,8 @@ interface Props {
 
 /** FR04: deletion needs explicit confirmation, made deliberate by typing the project title. */
 export function ConfirmDeleteDialog({ title, error, busy, onConfirm, onCancel }: Props) {
-  const ref = useRef<HTMLDialogElement>(null);
+  const { ref, requestClose, onCancel: onEscape } = useDialogMotion(onCancel);
   const [typed, setTyped] = useState('');
-
-  useEffect(() => {
-    ref.current?.showModal();
-  }, []);
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -24,7 +21,7 @@ export function ConfirmDeleteDialog({ title, error, busy, onConfirm, onCancel }:
   }
 
   return (
-    <dialog ref={ref} className="dialog card" onCancel={onCancel} aria-labelledby="delete-title">
+    <dialog ref={ref} className="dialog card" onCancel={onEscape} aria-labelledby="delete-title">
       <form className="form" onSubmit={submit}>
         <h2 id="delete-title">Delete “{title}”?</h2>
         <p className="muted">
@@ -37,7 +34,7 @@ export function ConfirmDeleteDialog({ title, error, busy, onConfirm, onCancel }:
           <button type="submit" className="btn btn-danger" disabled={busy || typed.trim() !== title}>
             {busy ? 'Deleting…' : 'Delete project'}
           </button>
-          <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={busy}>
+          <button type="button" className="btn btn-ghost" onClick={requestClose} disabled={busy}>
             Cancel
           </button>
         </div>

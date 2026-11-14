@@ -3,9 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthContext';
+import { ToastProvider } from './components/ui/Toast';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles.css';
+import './styles/primitives.css';
 import './styles/motion.css';
 import { applyStoredTheme } from './lib/theme';
 
@@ -15,7 +17,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <ToastProvider>
+          <App />
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

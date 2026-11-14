@@ -9,6 +9,7 @@ import { ProjectBulletin } from './ProjectBulletin';
 import { ProjectStory } from './ProjectStory';
 import { ScreenshotGallery } from './ScreenshotGallery';
 import { ReportButton } from './ReportButton';
+import { useToast } from './ui/Toast';
 
 function Locked({ children }: { children: React.ReactNode }) {
   return (
@@ -20,12 +21,14 @@ function Locked({ children }: { children: React.ReactNode }) {
 
 /** FR12: copies the public share link, which shows a preview card on social media and grants no extra access. */
 function ShareButton({ id }: { id: string }) {
+  const toast = useToast();
   const [state, setState] = useState<'idle' | 'copied' | 'shown'>('idle');
   const link = `${window.location.origin}/p/${id}`;
   async function copy() {
     try {
       await navigator.clipboard.writeText(link);
       setState('copied');
+      toast('Share link copied');
     } catch {
       setState('shown');
     }

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useDialogMotion } from '../motion';
 import { Link } from 'react-router';
 import { api, ApiError, MILESTONE_LABELS, MILESTONE_STATUSES, STAGE_LABELS, STAGES, type MilestoneStatus, type Workspace } from '../api';
 
@@ -389,7 +390,7 @@ function FullBulletin({ title, stage: initialStage, milestones: initialMilestone
 }
 
 function BulletinPresentation({ title, stage, milestones, progress, counts, accomplished, onClose }: Props & { counts: Record<MilestoneStatus, number>; accomplished: Accomplished; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null);
+  const { ref, requestClose, onCancel } = useDialogMotion(onClose);
   const [index, setIndex] = useState(0);
   const total = milestones.length;
 
@@ -453,10 +454,6 @@ function BulletinPresentation({ title, stage, milestones, progress, counts, acco
   const last = slides.length - 1;
 
   useEffect(() => {
-    ref.current?.showModal();
-  }, []);
-
-  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') setIndex((i) => Math.min(last, i + 1));
       if (e.key === 'ArrowLeft' || e.key === 'PageUp') setIndex((i) => Math.max(0, i - 1));
@@ -467,10 +464,10 @@ function BulletinPresentation({ title, stage, milestones, progress, counts, acco
 
   const slide = slides[index];
   return (
-    <dialog ref={ref} className="deck" onCancel={onClose} onClose={onClose} aria-labelledby="deck-title">
+    <dialog ref={ref} className="deck" onCancel={onCancel} aria-labelledby="deck-title">
       <header className="deck-head">
         <span className="muted">{title} · Project bulletin</span>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={requestClose}>
           Close ✕
         </button>
       </header>

@@ -4,6 +4,9 @@ import { api, ApiError, OFFER_TYPE_LABELS, type MyOffer, type MyProject } from '
 import { Alert } from '../components/Alert';
 import { SelectField, TextAreaField } from '../components/FormControls';
 import { FormField } from '../components/FormField';
+import { useToast } from '../components/ui/Toast';
+import { SkeletonList } from '../components/ui/Skeleton';
+import { EmptyState } from '../components/ui/EmptyState';
 
 const REVIEW_BADGE: Record<MyOffer['reviewStatus'], { label: string; badge: string }> = {
   PENDING: { label: 'In review', badge: 'badge-navy' },
@@ -20,7 +23,7 @@ export function Offers() {
   const [fields, setFields] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const toast = useToast();
 
   const load = useCallback(() => {
     api<{ items: MyOffer[] }>('/offers/mine')
@@ -40,12 +43,11 @@ export function Offers() {
     e.preventDefault();
     setBusy(true);
     setError('');
-    setNotice('');
     setFields({});
     try {
       await api('/offers', { body: { ...form, skills: form.skills.split(',').map((s) => s.trim()).filter(Boolean) } });
       setForm(EMPTY);
-      setNotice('Offer submitted. It becomes visible to Professionals once an Admin approves it.');
+      toast('Offer submitted. It becomes visible to Professionals once an Admin approves it.');
       load();
     } catch (err) {
       if (err instanceof ApiError) {
@@ -74,7 +76,6 @@ export function Offers() {
         <p className="muted">Offer paid work on a project you own or edit. ProjectBridge does not process payments; you arrange them directly.</p>
       </header>
       {error && <Alert tone="error">{error}</Alert>}
-      {notice && <Alert tone="success">{notice}</Alert>}
 
       <section className="card card-pad stack" aria-labelledby="new-offer-title">
         <h2 id="new-offer-title">Post an offer</h2>
@@ -115,8 +116,8 @@ export function Offers() {
 
       <section className="stack" aria-labelledby="my-offers-title">
         <h2 id="my-offers-title">Your offers</h2>
-        {offers === null && <p className="muted">Loading…</p>}
-        {offers?.length === 0 && <p className="muted">You have not posted any offers yet.</p>}
+        {offers === null && <SkeletonList rows={2} label="Loading your offers…" />}
+        {offers?.length === 0 && <EmptyState title="No offers yet">Post paid work on one of your published projects with the form above.</EmptyState>}
         {offers?.map((o) => (
           <article key={o.id} className="card card-pad stack">
             <div className="row space-between">
