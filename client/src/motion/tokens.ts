@@ -5,48 +5,48 @@
  * The rules they serve:
  *  1. Motion means connection: something links, transfers or settles. Nothing floats for decoration.
  *  2. Lines draw before content arrives.
- *  3. Weighted easing: no linear tweens, no bouncy defaults.
+ *  3. Circular easing with a long settle, as in the Sharp UI kit: no linear tweens, nothing bounces.
  *  4. The interface is usable before any animation finishes.
  *  5. One hero moment per page at most.
  */
 export const DURATION = {
   /** Hover, press, focus. */
-  micro: 0.18,
+  micro: 0.25,
   /** Opacity-only changes, and everything under reduced motion. */
-  fade: 0.25,
+  fade: 0.35,
   /** A component arriving. */
-  enter: 0.6,
+  enter: 0.8,
   /** A line or stroke drawing. */
-  draw: 0.8,
+  draw: 0.95,
   /** The sweep between routes. */
-  page: 0.7,
+  page: 0.65,
   /** The longest a hero sequence may run in total. */
-  hero: 1.4,
+  hero: 1.6,
 } as const;
 
 export const EASE = {
   /** Entrances: fast start, long settle. */
-  enter: 'power3.out',
+  enter: 'circ.out',
   /** Exits: leave quickly. */
   exit: 'power2.in',
   /** Route transitions and strokes that travel. */
-  travel: 'expo.inOut',
+  travel: 'circ.inOut',
   /** Only for the moment a connection is made. */
-  lock: 'back.out(1.4)',
+  lock: 'expo.out',
   micro: 'power2.out',
 } as const;
 
 export const STAGGER = {
   /** Between items of a list. */
-  list: 0.06,
+  list: 0.07,
   /** Between lines of a headline. */
-  lines: 0.09,
+  lines: 0.1,
   /** Between strokes of a drawing. */
   strokes: 0.12,
 } as const;
 
 /** How far an entering element travels, in pixels. */
-export const DISTANCE = { near: 12, far: 28 } as const;
+export const DISTANCE = { near: 16, far: 26 } as const;
 
 /** Where an element must be in the viewport before it enters. */
 export const VIEW_START = 'top 88%';

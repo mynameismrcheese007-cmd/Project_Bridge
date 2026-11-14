@@ -34,6 +34,7 @@ export function App() {
       <NavBar />
       <div id="content">
         <PageTransition>
+        {(location) => (
         <Suspense
           fallback={
             <main className="page page-narrow">
@@ -41,7 +42,7 @@ export function App() {
             </main>
           }
         >
-        <Routes>
+        <Routes location={location}>
           <Route path="/" element={<Explore />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
@@ -136,6 +137,7 @@ export function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
+        )}
         </PageTransition>
       </div>
     </>

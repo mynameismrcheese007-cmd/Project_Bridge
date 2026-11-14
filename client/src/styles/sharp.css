@@ -1,0 +1,426 @@
+/*
+ * The Sharp UI kit's character, applied to ProjectBridge's existing class names. Loaded last.
+ * Editorial grotesque type, narrow uppercase labels, square edges, rules instead of shadows, and
+ * hover states that wipe rather than lift. Colours and timing come from tokens.css.
+ */
+
+/* ---------- Type ---------- */
+:root {
+  font-synthesis-weight: none;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  transition: background-color 0.4s var(--ease-in-out), color 0.4s var(--ease-in-out);
+}
+h1,
+h2,
+h3,
+.hero-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-wrap: balance;
+}
+h1,
+.hero-title {
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+}
+h2 {
+  font-size: var(--step-2);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+h3 {
+  letter-spacing: -0.015em;
+}
+
+/* Every label, eyebrow, button, tab and table head speaks Narrow, uppercase and tracked. */
+.annotation {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: var(--signal-text);
+}
+/* The leading tick mark. */
+.annotation::before {
+  content: '';
+  flex: none;
+  width: 1.75rem;
+  height: 1px;
+  background: currentColor;
+}
+th,
+label,
+.field-label,
+.bulletin-label,
+.tab-count {
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+}
+th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ---------- Buttons: the ground wipes upward on hover ---------- */
+.btn {
+  --btn-bg: var(--ink);
+  --btn-fg: var(--paper);
+  --btn-wipe: var(--signal);
+  --btn-wipe-fg: var(--on-signal);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0.75rem 1.5rem;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid var(--btn-bg);
+  border-radius: 0;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition:
+    color 0.35s var(--ease-in-out),
+    border-color 0.35s var(--ease-in-out);
+}
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--btn-wipe);
+  transform: translateY(101%);
+  transition: transform 0.45s var(--ease-in-out);
+}
+.btn.btn:hover:not(:disabled):not([aria-disabled='true']),
+.btn.btn:focus-visible {
+  background: var(--btn-bg);
+  color: var(--btn-wipe-fg);
+  border-color: var(--btn-wipe);
+  filter: none;
+}
+.btn:hover:not(:disabled):not([aria-disabled='true'])::before,
+.btn:focus-visible::before {
+  transform: translateY(0);
+}
+.btn:active:not(:disabled) {
+  transform: none;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  border-radius: 0;
+}
+.btn.btn-primary {
+  --btn-bg: var(--ink);
+  --btn-fg: var(--paper);
+}
+.btn.btn-signal {
+  --btn-bg: var(--signal);
+  --btn-fg: var(--on-signal);
+  --btn-wipe: var(--ink);
+  --btn-wipe-fg: var(--paper);
+}
+.btn.btn-secondary {
+  --btn-bg: transparent;
+  --btn-fg: var(--ink);
+  --btn-wipe: var(--ink);
+  --btn-wipe-fg: var(--paper);
+  border-color: var(--line-strong);
+}
+.btn.btn-ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--ink-2);
+  --btn-wipe: var(--paper-2);
+  --btn-wipe-fg: var(--ink);
+  border-color: transparent;
+}
+.btn.btn-ghost:hover:not(:disabled) {
+  border-color: var(--line-strong);
+}
+.btn.btn-danger {
+  --btn-bg: var(--danger);
+  --btn-fg: var(--paper);
+  --btn-wipe: var(--ink);
+  --btn-wipe-fg: var(--paper);
+}
+.btn.btn-ghost.danger-text {
+  --btn-fg: var(--danger);
+  --btn-wipe-fg: var(--danger);
+}
+.btn.btn-sm {
+  min-height: 34px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.75rem;
+}
+.btn.btn-lg {
+  min-height: 52px;
+  padding: 1.05rem 1.85rem;
+  font-size: 0.8125rem;
+}
+.btn.btn[data-state='loading'],
+.btn.btn[data-state='loading']:hover {
+  color: transparent;
+}
+.btn[data-state='loading']::after {
+  border-color: var(--btn-fg);
+  border-right-color: transparent;
+}
+.btn.btn[data-state='success'] {
+  --btn-bg: var(--ok);
+  --btn-fg: var(--paper);
+}
+.btn .icon {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+/* ---------- Navigation: blurred ground, labels, an underline that wipes in ---------- */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+.nav-links {
+  gap: 1.5rem;
+}
+.nav-links a {
+  position: relative;
+  padding: 0.35rem 0;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  transition: color 0.25s var(--ease-in-out);
+}
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--signal);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s var(--ease-out);
+}
+.nav-links a:hover,
+.nav-links a.active {
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  text-decoration: none;
+}
+.nav-links a:hover::after,
+.nav-links a.active::after {
+  transform: scaleX(1);
+}
+
+/* ---------- Tabs ---------- */
+.tab {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  transition: color 0.3s var(--ease-in-out);
+}
+.tab::after {
+  background: var(--signal);
+  transition: transform 0.45s var(--ease-out);
+}
+
+/* ---------- Badges and chips: square, state carried by a leading stripe ---------- */
+.badge {
+  padding: 0.28rem 0.6rem;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid currentColor;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.badge-accent {
+  color: var(--signal-text);
+}
+.badge-amber {
+  color: var(--warn);
+}
+.badge-success {
+  color: var(--ok);
+}
+.badge-navy {
+  color: var(--ink-2);
+}
+.chip {
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  transition:
+    color 0.25s var(--ease-in-out),
+    border-color 0.25s var(--ease-in-out);
+}
+a.chip:hover,
+.chip-link:hover {
+  color: var(--signal-text);
+  border-color: var(--signal);
+  text-decoration: none;
+}
+
+/* ---------- Surfaces: bordered blocks, not floating cards ---------- */
+.card {
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: none;
+  transition: border-color 0.35s var(--ease-in-out);
+}
+.project-card,
+.project-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+.project-card:hover {
+  border-color: var(--signal);
+}
+/* The picture scales inside its frame; the card itself never lifts. */
+.project-cover {
+  overflow: hidden;
+}
+.project-cover img {
+  transition: transform 0.9s var(--ease-out);
+}
+.project-card:hover .project-cover img {
+  transform: scale(1.045);
+}
+.project-card:focus-within {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+
+/* ---------- Fields ---------- */
+.input,
+select.input,
+textarea.input {
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background-color: var(--paper);
+  transition:
+    border-color 0.3s var(--ease-in-out),
+    box-shadow 0.3s var(--ease-in-out);
+}
+.input:focus,
+.input:focus-visible {
+  outline: none;
+  border-color: var(--signal);
+  box-shadow: inset 0 -2px 0 var(--signal);
+}
+.input[aria-invalid='true'] {
+  border-color: var(--danger);
+  box-shadow: inset 0 -2px 0 var(--danger);
+}
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  border-radius: 0;
+}
+
+/* ---------- The curtain between pages ---------- */
+.page-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-transition);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: var(--page-gutter);
+  visibility: hidden;
+  background: var(--ink);
+  color: var(--paper);
+  will-change: transform;
+}
+.page-curtain-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: clamp(2rem, 6vw, 4.25rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 0.92;
+  overflow: hidden;
+}
+.page-curtain-mark span {
+  display: block;
+}
+.page-curtain-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+.page-curtain-label::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  background: var(--signal);
+}
+
+/* ---------- Page headers and small screens ---------- */
+.hero .annotation,
+.page-header .annotation {
+  font-size: 0.8125rem;
+  color: var(--signal-text);
+}
+@media (max-width: 600px) {
+  .nav-actions {
+    gap: 2px;
+  }
+  .nav-actions .btn {
+    min-height: 36px;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.72rem;
+  }
+  .nav-links {
+    gap: 1.1rem;
+  }
+}

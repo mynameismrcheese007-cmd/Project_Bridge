@@ -1,18 +1,7 @@
 /* Styles the motion layer needs. The movement itself is in src/motion. */
 
-/* The blueprint wipe between routes: a hairline with a faint wash behind it. */
 .page-transition {
   position: relative;
-}
-.page-transition-sweep {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-transition);
-  pointer-events: none;
-  visibility: hidden;
-  border-right: var(--hairline) solid var(--signal);
-  background: linear-gradient(to right, transparent 82%, var(--grid));
-  will-change: transform;
 }
 
 /* A rule that draws itself. */

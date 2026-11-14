@@ -298,7 +298,7 @@ select.input:focus {
 }
 .dialog::backdrop,
 .lightbox::backdrop {
-  background: rgb(6 18 29 / 0.6);
+  background: rgb(11 11 11 / 0.6);
   animation: backdrop-in var(--dur-fade) var(--ease-out);
 }
 @keyframes backdrop-in {

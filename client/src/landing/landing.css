@@ -3,13 +3,13 @@
  * rather than taken from the page tokens.
  */
 .landing {
-  --l-ink: #0b1d2e;
-  --l-ink-2: #10283d;
-  --l-paper: #f6f3ec;
-  --l-dim: #9fb0c0;
-  --l-line: rgb(246 243 236 / 0.22);
-  --l-line-strong: rgb(246 243 236 / 0.6);
-  --l-signal: #ff6a3d;
+  --l-ink: #0b0b0b;
+  --l-ink-2: #171716;
+  --l-paper: #fdfbf7;
+  --l-dim: #a6a199;
+  --l-line: rgb(253 251 247 / 0.22);
+  --l-line-strong: rgb(253 251 247 / 0.6);
+  --l-signal: #5d9eff;
   color: var(--l-paper);
   background: var(--l-ink);
 }
@@ -29,7 +29,7 @@
   overflow: hidden;
   /* A quiet 12-column grid, like drafting paper. */
   background-image:
-    repeating-linear-gradient(to right, rgb(246 243 236 / 0.045) 0 1px, transparent 1px calc(100% / 12)),
+    repeating-linear-gradient(to right, rgb(253 251 247 / 0.045) 0 1px, transparent 1px calc(100% / 12)),
     radial-gradient(120% 80% at 50% 0%, var(--l-ink-2), var(--l-ink) 70%);
 }
 /* Light grain, so the ink is a surface and not a flat fill. */
@@ -57,11 +57,11 @@
   color: var(--l-paper);
   max-width: 22ch;
   /* Sized so the headline and the bridge share the first screen. */
-  font-size: clamp(2.6rem, 1.5rem + 4.6vw, 5.4rem);
-  font-weight: 800;
+  font-size: clamp(2.5rem, 1.3rem + 4vw, 4.6rem);
+  font-weight: 600;
   /* Room for descenders: each line is masked while it rises in. */
-  line-height: 1.08;
-  letter-spacing: -0.005em;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
 .landing-lead {
@@ -82,7 +82,7 @@
 }
 .landing-ghost:hover {
   border-color: var(--l-paper);
-  background: rgb(246 243 236 / 0.08);
+  background: rgb(253 251 247 / 0.08);
 }
 .landing .btn:focus-visible {
   outline-color: var(--l-paper);
@@ -129,10 +129,10 @@
   stroke-width: 3;
 }
 .span-node-student {
-  fill: #b9d3e6;
+  fill: #c4d5e7;
 }
 .span-node-industry {
-  fill: #f0d7a8;
+  fill: #e6e2da;
 }
 .span-label {
   fill: var(--l-dim);
