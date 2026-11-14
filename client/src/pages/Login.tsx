@@ -6,6 +6,7 @@ import { Alert } from '../components/Alert';
 import { AuthLayout } from '../components/AuthLayout';
 import { FormField } from '../components/FormField';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { Button } from '../components/ui/Button';
 
 export function Login() {
   const { login } = useAuth();
@@ -75,9 +76,9 @@ export function Login() {
           error={errors.password}
           required
         />
-        <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={submitting}>
-          {submitting ? 'Signing in…' : 'Sign in'}
-        </button>
+        <Button type="submit" size="lg" block loading={submitting}>
+          Sign in
+        </Button>
       </form>
     </AuthLayout>
   );

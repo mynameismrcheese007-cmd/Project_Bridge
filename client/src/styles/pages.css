@@ -1,0 +1,128 @@
+/*
+ * Page-level styles on the new tokens. Loaded last; each block replaces the older rules for the
+ * same page as that page moves over.
+ */
+
+/* ---------- Sign in, register, password ---------- */
+.auth-shell {
+  min-height: calc(100vh - 61px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  padding: 0;
+  background: var(--paper);
+}
+.auth-panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-7) var(--space-4) var(--space-8);
+}
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-6) var(--space-5);
+}
+.auth-head {
+  text-align: left;
+  margin-bottom: var(--space-5);
+}
+.auth-head h1 {
+  font-size: var(--step-4);
+}
+.auth-head p {
+  color: var(--ink-3);
+  margin-top: var(--space-1);
+}
+.auth-footer {
+  color: var(--ink-3);
+}
+.divider {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+}
+/* The ink side: always dark, like the landing, so its colours are fixed here. */
+.auth-art {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-8) var(--space-7);
+  color: #f6f3ec;
+  background-color: #0b1d2e;
+  background-image: repeating-linear-gradient(to right, rgb(246 243 236 / 0.05) 0 1px, transparent 1px calc(100% / 6));
+}
+.auth-art .annotation {
+  color: #9fb0c0;
+}
+.auth-art svg {
+  width: 100%;
+  max-width: 460px;
+  height: auto;
+  overflow: visible;
+}
+.auth-art path {
+  fill: none;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.auth-art-line {
+  stroke: rgb(246 243 236 / 0.6);
+  stroke-width: 1.5;
+}
+.auth-art-cable {
+  stroke: #f6f3ec;
+  stroke-width: 2;
+}
+.auth-art-hanger {
+  stroke: rgb(246 243 236 / 0.25);
+  stroke-width: 1;
+}
+.auth-art-signal {
+  stroke: #ff6a3d;
+  stroke-width: 2;
+}
+.auth-art-node {
+  fill: #0b1d2e;
+  stroke: #f6f3ec;
+  stroke-width: 2;
+}
+.auth-art-line-text {
+  font-family: var(--font-display);
+  font-size: var(--step-5);
+  font-weight: 800;
+  line-height: 1;
+}
+.auth-art-sub {
+  max-width: 38ch;
+  color: #9fb0c0;
+  font-size: var(--step-1);
+}
+@media (min-width: 960px) {
+  .auth-shell {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  }
+  .auth-art {
+    display: flex;
+  }
+  .auth-panel {
+    align-items: center;
+  }
+}
+
+/* The Google button has a fixed width; on a narrow phone the card gives it room rather than overflow. */
+.google-signin {
+  max-width: 100%;
+  overflow: hidden;
+}
+@media (max-width: 480px) {
+  .auth-panel {
+    padding-inline: var(--space-3);
+  }
+  .auth-card {
+    padding-inline: var(--space-3);
+  }
+}

@@ -9,6 +9,7 @@ import './styles/base.css';
 import './styles.css';
 import './styles/primitives.css';
 import './styles/motion.css';
+import './styles/pages.css';
 import { applyStoredTheme } from './lib/theme';
 
 applyStoredTheme();

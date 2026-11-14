@@ -4,6 +4,7 @@ import { api, ApiError } from '../api';
 import { Alert } from '../components/Alert';
 import { AuthLayout } from '../components/AuthLayout';
 import { FormField } from '../components/FormField';
+import { Button } from '../components/ui/Button';
 
 export function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -46,9 +47,9 @@ export function ForgotPassword() {
           error={errors.email}
           required
         />
-        <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={submitting}>
-          {submitting ? 'Sending…' : 'Send reset link'}
-        </button>
+        <Button type="submit" size="lg" block loading={submitting}>
+          Send reset link
+        </Button>
       </form>
     </AuthLayout>
   );

@@ -6,6 +6,7 @@ import { Alert } from '../components/Alert';
 import { AuthLayout } from '../components/AuthLayout';
 import { FormField, PasswordChecklist } from '../components/FormField';
 import { passwordProblem } from '../passwordRules';
+import { Button } from '../components/ui/Button';
 
 export function ResetPassword() {
   const [params] = useSearchParams();
@@ -94,9 +95,9 @@ export function ResetPassword() {
           error={errors.confirm}
           required
         />
-        <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={submitting}>
-          {submitting ? 'Saving…' : 'Change password'}
-        </button>
+        <Button type="submit" size="lg" block loading={submitting}>
+          Change password
+        </Button>
       </form>
     </AuthLayout>
   );

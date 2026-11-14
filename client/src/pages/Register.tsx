@@ -7,6 +7,7 @@ import { AuthLayout } from '../components/AuthLayout';
 import { FormField, PasswordChecklist } from '../components/FormField';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { emailProblem, nameProblem, passwordProblem } from '../passwordRules';
+import { Button } from '../components/ui/Button';
 
 export function Register() {
   const { refresh } = useAuth();
@@ -104,9 +105,9 @@ export function Register() {
           error={errors.confirm}
           required
         />
-        <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={submitting}>
-          {submitting ? 'Creating account…' : 'Create account'}
-        </button>
+        <Button type="submit" size="lg" block loading={submitting}>
+          Create account
+        </Button>
       </form>
     </AuthLayout>
   );
