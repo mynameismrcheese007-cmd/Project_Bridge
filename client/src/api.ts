@@ -150,6 +150,20 @@ export interface Invite {
   invitedAt: string;
 }
 
+/** The automatic security audit of content waiting for review. */
+export type SecurityVerdict = 'WELL' | 'SUSPICIOUS' | 'DANGEROUS';
+export interface SecurityFinding {
+  code: string;
+  severity: 'SUSPICIOUS' | 'DANGEROUS';
+  field: string;
+  message: string;
+  excerpt?: string;
+}
+export interface SecurityAudit {
+  verdict: SecurityVerdict;
+  findings: SecurityFinding[];
+}
+
 export interface ReviewQueue {
   submissions: Array<
     ProjectContent & {
@@ -159,6 +173,7 @@ export interface ReviewQueue {
       submittedAt: string | null;
       ownershipDeclaredAt: string | null;
       screenshots: Array<{ id: string; url: string }>;
+      security: SecurityAudit;
     }
   >;
   revisions: Array<{
@@ -168,6 +183,7 @@ export interface ReviewQueue {
     submittedAt: string;
     current: ProjectContent;
     proposed: ProjectContent;
+    security: SecurityAudit;
   }>;
 }
 

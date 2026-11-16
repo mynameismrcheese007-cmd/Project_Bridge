@@ -8,6 +8,8 @@ import { useStaggerList } from '../motion';
 
 /** Where a notice leads, if anywhere the user can open. */
 function linkFor(n: AppNotification): string | null {
+  // Security alerts are for Admins and point at the review queue, where the findings are.
+  if (n.eventType === 'SECURITY_ALERT') return '/admin';
   if (n.targetType === 'Project' && n.targetId) return `/projects/${n.targetId}`;
   if (n.targetType === 'ProjectWorkspace' && n.targetId) return `/projects/${n.targetId}/manage`;
   if (n.targetType === 'Conversation' && n.targetId) return `/messages/${n.targetId}`;

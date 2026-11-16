@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, ApiError, STAGE_LABELS, type ProjectContent, type ReviewQueue as Queue } from '../api';
+import { api, ApiError, STAGE_LABELS, type ProjectContent, type ReviewQueue as Queue, type SecurityAudit } from '../api';
 import { Alert } from './Alert';
 import { TextAreaField } from './FormControls';
 import { SkeletonList } from './ui/Skeleton';
@@ -18,20 +18,92 @@ function show(value: ProjectContent[keyof ProjectContent]): string {
   return value ?? '—';
 }
 
+const VERDICT_TEXT: Record<SecurityAudit['verdict'], { label: string; note: string; badge: string }> = {
+  WELL: { label: 'Well', note: 'The automatic check found nothing unusual.', badge: 'badge-success' },
+  SUSPICIOUS: { label: 'Suspicious', note: 'Look at the findings below before approving.', badge: 'badge-amber' },
+  DANGEROUS: { label: 'Dangerous', note: 'Approval is held back. Send it back, or override with a reason if you have checked it by hand.', badge: 'badge-danger' },
+};
+
+/** The automatic security audit, shown above everything else so it is read first. */
+function SecurityReport({ audit }: { audit: SecurityAudit }) {
+  const text = VERDICT_TEXT[audit.verdict];
+  return (
+    <section className={`security-report security-${audit.verdict.toLowerCase()}`} aria-label="Security audit">
+      <div className="row">
+        <span className="annotation">Security audit</span>
+        <span className={`badge ${text.badge}`}>{text.label}</span>
+      </div>
+      <p className="small">{text.note}</p>
+      {audit.findings.length > 0 && (
+        <ul className="security-findings">
+          {audit.findings.map((f, i) => (
+            <li key={i}>
+              <span className={`badge ${f.severity === 'DANGEROUS' ? 'badge-danger' : 'badge-amber'}`}>{f.severity === 'DANGEROUS' ? 'Dangerous' : 'Suspicious'}</span>{' '}
+              <strong>{FIELD_LABELS[f.field as keyof ProjectContent] ?? 'Image'}:</strong> {f.message}
+              {f.excerpt && <code className="security-excerpt">{f.excerpt}</code>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /** Approve, or send back with a note. Used for both submissions and revisions. */
-function Decision({ onApprove, onReturn, returnLabel, busy }: { onApprove: () => void; onReturn: (note: string) => Promise<boolean>; returnLabel: string; busy: boolean }) {
+function Decision({
+  onApprove,
+  onReturn,
+  returnLabel,
+  busy,
+  dangerous,
+}: {
+  onApprove: (override?: string) => void;
+  onReturn: (note: string) => Promise<boolean>;
+  returnLabel: string;
+  busy: boolean;
+  dangerous: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState('');
+  const [overriding, setOverriding] = useState(false);
+  const [reason, setReason] = useState('');
   return (
     <div className="stack" style={{ gap: 10 }}>
       <div className="row">
-        <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={onApprove}>
-          Approve
-        </button>
+        {dangerous ? (
+          <button type="button" className="btn btn-danger btn-sm" disabled={busy} onClick={() => setOverriding((o) => !o)} aria-expanded={overriding}>
+            Override and approve…
+          </button>
+        ) : (
+          <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => onApprove()}>
+            Approve
+          </button>
+        )}
         <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
           {returnLabel}
         </button>
       </div>
+      {overriding && (
+        <form
+          className="form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onApprove(reason);
+          }}
+        >
+          <TextAreaField
+            label="Why is it safe to publish?"
+            rows={3}
+            maxLength={1000}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            hint="Recorded in the audit log with your name. At least 10 characters."
+          />
+          <button type="submit" className="btn btn-danger btn-sm" style={{ alignSelf: 'flex-start' }} disabled={busy || reason.trim().length < 10}>
+            Approve despite the audit
+          </button>
+        </form>
+      )}
       {open && (
         <form
           className="form"
@@ -68,11 +140,11 @@ export function ReviewQueue() {
     void load();
   }, [load]);
 
-  async function decide(path: string, success: string, note?: string) {
+  async function decide(path: string, success: string, body?: Record<string, unknown>) {
     setBusy(true);
     setMessage(null);
     try {
-      await api(path, { method: 'POST', body: note === undefined ? undefined : { note } });
+      await api(path, { method: 'POST', body });
       setMessage({ tone: 'success', text: success });
       await load();
       return true;
@@ -112,6 +184,7 @@ export function ReviewQueue() {
             </span>
           </div>
           <h3>{s.title}</h3>
+          <SecurityReport audit={s.security} />
           <dl className="details">
             {(Object.keys(FIELD_LABELS) as Array<keyof ProjectContent>)
               .filter((f) => f !== 'title')
@@ -119,7 +192,8 @@ export function ReviewQueue() {
                 <div key={f} style={{ display: 'contents' }}>
                   <dt>{FIELD_LABELS[f]}</dt>
                   <dd className="pre-wrap">
-                    {f === 'demoUrl' && s.demoUrl ? (
+                    {/* A flagged link is shown as text, so it cannot be opened by a stray click. */}
+                    {f === 'demoUrl' && s.demoUrl && s.security.verdict === 'WELL' ? (
                       <a href={s.demoUrl} target="_blank" rel="noopener noreferrer">
                         {s.demoUrl}
                       </a>
@@ -143,9 +217,10 @@ export function ReviewQueue() {
           )}
           <Decision
             busy={busy}
+            dangerous={s.security.verdict === 'DANGEROUS'}
             returnLabel="Request changes"
-            onApprove={() => decide(`/admin/reviews/projects/${s.id}/approve`, `“${s.title}” is now published.`)}
-            onReturn={(note) => decide(`/admin/reviews/projects/${s.id}/request-changes`, `Changes requested for “${s.title}”.`, note)}
+            onApprove={(reason) => decide(`/admin/reviews/projects/${s.id}/approve`, `“${s.title}” is now published.`, reason ? { overrideSecurity: true, reason } : undefined)}
+            onReturn={(note) => decide(`/admin/reviews/projects/${s.id}/request-changes`, `Changes requested for “${s.title}”.`, { note })}
           />
         </article>
       ))}
@@ -161,6 +236,7 @@ export function ReviewQueue() {
               </span>
             </div>
             <h3>{r.current.title}</h3>
+            <SecurityReport audit={r.security} />
             <p className="muted small">The current version stays live until you approve. Changed: {changed.map((f) => FIELD_LABELS[f]).join(', ') || 'nothing'}.</p>
             {changed.map((f) => (
               <div key={f} className="diff">
@@ -179,9 +255,10 @@ export function ReviewQueue() {
             ))}
             <Decision
               busy={busy}
+              dangerous={r.security.verdict === 'DANGEROUS'}
               returnLabel="Reject change"
-              onApprove={() => decide(`/admin/reviews/revisions/${r.id}/approve`, 'Change approved and now live.')}
-              onReturn={(note) => decide(`/admin/reviews/revisions/${r.id}/reject`, 'Change rejected. The current version stays live.', note)}
+              onApprove={(reason) => decide(`/admin/reviews/revisions/${r.id}/approve`, 'Change approved and now live.', reason ? { overrideSecurity: true, reason } : undefined)}
+              onReturn={(note) => decide(`/admin/reviews/revisions/${r.id}/reject`, 'Change rejected. The current version stays live.', { note })}
             />
           </article>
         );

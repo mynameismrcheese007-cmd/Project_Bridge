@@ -4,6 +4,27 @@ import { HttpError } from '../../lib/errors.js';
 import { prisma, TX_OPTIONS } from '../../lib/prisma.js';
 import { notify } from '../notifications/service.js';
 import { signScreenshots } from '../projects/media.js';
+import { currentAudit } from '../security/service.js';
+import type { ScannableContent } from '../security/scanner.js';
+
+/** An Admin who approves content the audit marked dangerous must say so, with a reason. */
+export interface ApprovalInput {
+  overrideSecurity?: boolean;
+  reason?: string;
+}
+
+/**
+ * Re-checks the content being approved, so the decision never rests on a stale scan. Dangerous
+ * content is held back unless the Admin explicitly overrides; the override is recorded with the
+ * approval in the same transaction.
+ */
+function securityGate(content: ScannableContent, input: ApprovalInput) {
+  const result = currentAudit(content);
+  if (result.verdict === 'DANGEROUS' && !(input.overrideSecurity && input.reason && input.reason.trim().length >= 10)) {
+    throw new HttpError(409, 'SECURITY_REVIEW_REQUIRED', 'The security audit marked this content dangerous. Request changes, or confirm the override and give a reason of at least 10 characters.');
+  }
+  return result;
+}
 
 /**
  * FR13 review queue: approve submissions and revisions, or send them back with a note. Each decision
@@ -46,6 +67,7 @@ export async function listReviews() {
         submittedAt: p.submittedAt?.toISOString() ?? null,
         ownershipDeclaredAt: p.ownershipDeclaredAt?.toISOString() ?? null,
         screenshots: await signScreenshots(p.media),
+        security: currentAudit(p),
       })),
     ),
     revisions: revisions.map((r) => ({
@@ -55,13 +77,15 @@ export async function listReviews() {
       submittedAt: r.updatedAt.toISOString(),
       current: content(r.project),
       proposed: content(r),
+      security: currentAudit(r),
     })),
   };
 }
 
-export async function approveProject(admin: AuthUser, id: string) {
+export async function approveProject(admin: AuthUser, id: string, input: ApprovalInput = {}) {
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project || project.status !== 'SUBMITTED') throw noSubmission();
+  const security = securityGate(project, input);
   await prisma.$transaction(async (tx) => {
     const { count } = await tx.project.updateMany({
       where: { id, status: 'SUBMITTED' },
@@ -69,6 +93,7 @@ export async function approveProject(admin: AuthUser, id: string) {
     });
     if (count === 0) throw noSubmission();
     await audit({ action: 'PROJECT_APPROVED', actorId: admin.id, targetType: 'Project', targetId: id, oldValue: 'SUBMITTED', newValue: 'PUBLISHED' }, tx);
+    if (security.verdict === 'DANGEROUS') await audit({ action: 'SECURITY_OVERRIDE', actorId: admin.id, targetType: 'Project', targetId: id, reason: input.reason!.trim(), newValue: security.findings.map((f) => f.code).join(',') }, tx);
     await notify({ recipientId: project.ownerId, eventType: 'PROJECT_APPROVED', message: `"${project.title}" was approved and is now published.`, targetType: 'Project', targetId: id }, tx);
   }, TX_OPTIONS);
 }
@@ -85,14 +110,16 @@ export async function requestChanges(admin: AuthUser, id: string, note: string) 
 }
 
 /** Copies the proposed content onto the live project in one transaction. */
-export async function approveRevision(admin: AuthUser, revisionId: string) {
+export async function approveRevision(admin: AuthUser, revisionId: string, input: ApprovalInput = {}) {
   const revision = await prisma.projectRevision.findUnique({ where: { id: revisionId }, include: { project: true } });
   if (!revision || revision.status !== 'PENDING' || !['PUBLISHED', 'HIDDEN'].includes(revision.project.status)) throw noRevision();
+  const security = securityGate(revision, input);
   await prisma.$transaction(async (tx) => {
     const { count } = await tx.projectRevision.updateMany({ where: { id: revisionId, status: 'PENDING' }, data: { status: 'APPROVED', reviewNote: null } });
     if (count === 0) throw noRevision();
     await tx.project.update({ where: { id: revision.projectId }, data: content(revision) });
     await audit({ action: 'REVISION_APPROVED', actorId: admin.id, targetType: 'Project', targetId: revision.projectId, reason: revisionId, oldValue: 'PENDING', newValue: 'APPROVED' }, tx);
+    if (security.verdict === 'DANGEROUS') await audit({ action: 'SECURITY_OVERRIDE', actorId: admin.id, targetType: 'Project', targetId: revision.projectId, reason: input.reason!.trim(), newValue: security.findings.map((f) => f.code).join(',') }, tx);
     await notify({ recipientId: revision.project.ownerId, eventType: 'REVISION_APPROVED', message: `Your changes to "${revision.title}" were approved and are now live.`, targetType: 'Project', targetId: revision.projectId }, tx);
   }, TX_OPTIONS);
 }

@@ -95,3 +95,11 @@ export const milestoneUpdateSchema = z.object(milestoneFields).partial();
 export const reviewNoteSchema = z.object({
   note: z.string({ required_error: 'Explain what needs to change.' }).trim().min(3, 'Explain what needs to change.').max(1000),
 });
+
+/** Approving content the security audit marked dangerous needs an explicit override and a reason. */
+export const approvalSchema = z
+  .object({
+    overrideSecurity: z.boolean().optional(),
+    reason: z.string().trim().max(1000, 'Keep the reason under 1000 characters.').optional(),
+  })
+  .strict();

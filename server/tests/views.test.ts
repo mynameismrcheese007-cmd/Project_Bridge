@@ -585,11 +585,13 @@ describe('Exact field lists', () => {
       const { body } = await agents.admin.get('/api/admin/reviews');
       const submission = body.submissions.find((s: { id: string }) => s.id === unpublished.SUBMITTED.id);
       expect(fields(submission)).toEqual([
-        'demoUrl', 'id', 'overview', 'owner', 'ownershipDeclaredAt', 'problem', 'screenshots', 'stage', 'submittedAt', 'summary', 'tags', 'title',
+        'demoUrl', 'id', 'overview', 'owner', 'ownershipDeclaredAt', 'problem', 'screenshots', 'security', 'stage', 'submittedAt', 'summary', 'tags', 'title',
       ]);
+      // The security audit is the verdict and its findings, nothing else.
+      expect(fields(submission.security)).toEqual(['findings', 'verdict']);
       expect(submission.owner).toEqual({ name: users.owner.name, email: users.owner.email });
       const revision = body.revisions.find((r: { projectId: string }) => r.projectId === live.id);
-      expect(fields(revision)).toEqual(['current', 'id', 'owner', 'projectId', 'proposed', 'submittedAt']);
+      expect(fields(revision)).toEqual(['current', 'id', 'owner', 'projectId', 'proposed', 'security', 'submittedAt']);
       expect(revision.owner).toEqual({ name: users.owner.name, email: users.owner.email });
       expect(fields(revision.proposed)).toEqual(['demoUrl', 'overview', 'problem', 'summary', 'tags', 'title']);
     });

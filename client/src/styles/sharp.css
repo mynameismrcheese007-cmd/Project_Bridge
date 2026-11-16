@@ -424,3 +424,38 @@ textarea.input {
     gap: 1.1rem;
   }
 }
+
+/* ---------- Security audit in the Admin review queue ---------- */
+.badge-danger {
+  color: var(--danger);
+}
+.security-report {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ok);
+  background: var(--paper);
+}
+.security-suspicious {
+  border-left-color: var(--warn);
+  background: var(--warn-soft);
+}
+.security-dangerous {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+.security-findings {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--step--1);
+}
+.security-excerpt {
+  display: block;
+  margin-top: var(--space-1);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}

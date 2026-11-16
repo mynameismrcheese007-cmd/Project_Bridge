@@ -8,6 +8,7 @@ import { prisma, TX_OPTIONS } from '../../lib/prisma.js';
 import { getCoverStorage, getStorage } from '../../lib/storage.js';
 import { toDetail } from '../discovery/visibility.js';
 import { notify } from '../notifications/service.js';
+import { assertSafeImage, recordAudit } from '../security/service.js';
 import { loadProjectFor } from './access.js';
 import { imageExtension, signScreenshots } from './media.js';
 import { completeProjectSchema, type ProjectInput } from './schemas.js';
@@ -92,12 +93,12 @@ export async function updateProject(user: AuthUser, id: string, input: ProjectIn
     if (pending) await prisma.projectRevision.delete({ where: { id: pending.id } });
     return;
   }
-  if (pending) {
-    await prisma.projectRevision.update({ where: { id: pending.id }, data: { ...proposed, authorId: user.id } });
-  } else {
-    await prisma.projectRevision.create({ data: { ...proposed, projectId: id, authorId: user.id } });
-  }
+  const revision = pending
+    ? await prisma.projectRevision.update({ where: { id: pending.id }, data: { ...proposed, authorId: user.id } })
+    : await prisma.projectRevision.create({ data: { ...proposed, projectId: id, authorId: user.id } });
   await projectAudit('REVISION_SUBMITTED', user, id, touched.join(','));
+  // Every version an Admin may be asked to approve is checked first.
+  await recordAudit({ projectId: id, revisionId: revision.id, title: proposed.title, content: proposed, actorId: user.id });
 }
 
 function pickDefined(patch: Partial<Content>): Partial<Content> {
@@ -116,6 +117,8 @@ export async function submitProject(user: AuthUser, id: string) {
     data: { status: 'SUBMITTED', submittedAt: now, ownershipDeclaredAt: now, reviewNote: null },
   });
   await projectAudit('PROJECT_SUBMITTED', user, id);
+  // The Admin sees the result in the review queue; the owner is not told what was found.
+  await recordAudit({ projectId: id, title: project.title, content: project, actorId: user.id });
 }
 
 // ---------------------------------------------------------------- Owner/editor views
@@ -254,8 +257,10 @@ export async function addMedia(user: AuthUser, id: string, files: UploadedFile[]
   const prepared = files.map((f) => {
     const ext = imageExtension(f.mimetype, f.buffer);
     if (!ext) throw new HttpError(400, 'INVALID_FILE', 'Screenshots must be PNG, JPEG or WebP images.');
-    return { file: f, path: `projects/${id}/${randomUUID()}.${ext}` };
+    return { file: f, ext, path: `projects/${id}/${randomUUID()}.${ext}` };
   });
+  // Every file is checked before any is stored, so a bad one leaves nothing behind.
+  for (const { file, ext } of prepared) await assertSafeImage({ projectId: id, title: project.title, actorId: user.id, ext, data: file.buffer });
 
   const storage = getStorage();
   for (const [i, { file, path }] of prepared.entries()) {
@@ -304,6 +309,7 @@ export async function setCover(user: AuthUser, id: string, file: UploadedFile | 
   if (!file) throw new HttpError(400, 'VALIDATION_ERROR', 'Choose an image.');
   const ext = imageExtension(file.mimetype, file.buffer);
   if (!ext) throw new HttpError(400, 'INVALID_FILE', 'The cover must be a PNG, JPEG or WebP image.');
+  await assertSafeImage({ projectId: id, title: project.title, actorId: user.id, ext, data: file.buffer });
 
   const storage = getCoverStorage();
   const path = `projects/${id}/cover-${randomUUID()}.${ext}`;

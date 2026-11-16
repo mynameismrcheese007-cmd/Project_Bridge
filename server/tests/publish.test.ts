@@ -95,7 +95,7 @@ describe('Submission and review', () => {
     expect(feed.body.items.map((c: { id: string }) => c.id)).toEqual([body.id]);
 
     const log = await prisma.auditLog.findMany({ where: { targetId: body.id }, orderBy: { createdAt: 'asc' } });
-    expect(log.map((l) => l.action)).toEqual(['PROJECT_CREATED', 'PROJECT_SUBMITTED', 'PROJECT_APPROVED']);
+    expect(log.map((l) => l.action)).toEqual(['PROJECT_CREATED', 'PROJECT_SUBMITTED', 'SECURITY_AUDIT', 'PROJECT_APPROVED']);
   });
 
   it('returns the Admin note when changes are requested, and allows resubmission', async () => {
