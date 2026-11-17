@@ -119,7 +119,7 @@ export function Explore() {
       {authLoading && <div className="auth-wait" aria-hidden="true" />}
     <main className="page" id="feed" hidden={authLoading}>
       <section className="hero">
-        <p className="annotation">{guest ? 'The projects' : 'Explore'}</p>
+        <p className="annotation">{guest ? 'Span 03 / The projects' : 'Explore'}</p>
         {guest ? <h2 className="hero-title">Explore the projects</h2> : <h1>Discover university projects</h1>}
         <p>From semester projects to real-world possibilities. Browse what students are building and find teams to support.</p>
         {tier && <span className="badge badge-accent">{TIER_NOTES[tier]}</span>}
