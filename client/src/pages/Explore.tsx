@@ -11,7 +11,6 @@ import { AnimatedNumber, useFlipList } from '../motion';
 
 const loadLanding = () => import('../landing/Landing');
 const Landing = lazy(loadLanding);
-const LandingFooter = lazy(() => loadLanding().then((m) => ({ default: m.LandingFooter })));
 
 type SortOption = 'default' | 'recent' | 'interaction';
 const SORTS: Array<{ value: SortOption; label: string }> = [
@@ -112,7 +111,7 @@ export function Explore() {
       {/* Guests get the landing sections above the feed; they are loaded on their own, so signed-in pages stay lean. */}
       {guest && (
         <Suspense fallback={<div className="landing-fallback" aria-hidden="true" />}>
-          <Landing latest={items[0]} />
+          <Landing />
         </Suspense>
       )}
       {/* Until we know whether this is a guest, hold the screen: showing the feed first and then
@@ -218,11 +217,6 @@ export function Explore() {
         </div>
       </div>
     </main>
-      {guest && (
-        <Suspense fallback={null}>
-          <LandingFooter />
-        </Suspense>
-      )}
     </>
   );
 }

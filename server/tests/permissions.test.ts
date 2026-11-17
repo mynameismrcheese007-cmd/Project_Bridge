@@ -15,7 +15,7 @@ import { projectsRouter } from '../src/modules/projects/routes.js';
 import { app, coverStorage, createProject, createUser, PASSWORD, PNG_BYTES, prisma, request, resetDb, signedInAgent, storage } from './helpers.js';
 
 type Agent = ReturnType<typeof request.agent>;
-type Method = 'get' | 'post' | 'patch' | 'delete';
+type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 /** auth: plain requireAuth. adminRole: only the router-wide requireRole('ADMIN'). selfOrEdit: requireSelfOrEdit. */
 type Gate = 'auth' | 'adminRole' | 'selfOrEdit' | PermissionAction;
 
