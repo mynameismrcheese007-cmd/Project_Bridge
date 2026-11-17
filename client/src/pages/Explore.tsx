@@ -11,6 +11,7 @@ import { AnimatedNumber, useFlipList } from '../motion';
 
 const loadLanding = () => import('../landing/Landing');
 const Landing = lazy(loadLanding);
+const LandingFooter = lazy(() => loadLanding().then((m) => ({ default: m.LandingFooter })));
 
 type SortOption = 'default' | 'recent' | 'interaction';
 const SORTS: Array<{ value: SortOption; label: string }> = [
@@ -111,7 +112,7 @@ export function Explore() {
       {/* Guests get the landing sections above the feed; they are loaded on their own, so signed-in pages stay lean. */}
       {guest && (
         <Suspense fallback={<div className="landing-fallback" aria-hidden="true" />}>
-          <Landing />
+          <Landing latest={items[0]} />
         </Suspense>
       )}
       {/* Until we know whether this is a guest, hold the screen: showing the feed first and then
@@ -119,7 +120,7 @@ export function Explore() {
       {authLoading && <div className="auth-wait" aria-hidden="true" />}
     <main className="page" id="feed" hidden={authLoading}>
       <section className="hero">
-        <p className="annotation">{guest ? 'Span 03 / The projects' : 'Explore'}</p>
+        <p className="annotation">{guest ? 'The projects' : 'Explore'}</p>
         {guest ? <h2 className="hero-title">Explore the projects</h2> : <h1>Discover university projects</h1>}
         <p>From semester projects to real-world possibilities. Browse what students are building and find teams to support.</p>
         {tier && <span className="badge badge-accent">{TIER_NOTES[tier]}</span>}
@@ -217,6 +218,11 @@ export function Explore() {
         </div>
       </div>
     </main>
+      {guest && (
+        <Suspense fallback={null}>
+          <LandingFooter />
+        </Suspense>
+      )}
     </>
   );
 }

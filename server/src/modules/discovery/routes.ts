@@ -191,7 +191,8 @@ discoveryRouter.get('/tags', async (_req, res) => {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, 40)
     .map(([tag, count]) => ({ tag, count }));
-  res.json({ items });
+  // The landing page shows how many projects are published; the number is public either way.
+  res.json({ items, projects: rows.length });
 });
 
 /** FR12: what a share link shows. The same for everyone, and free of the guest card budget. */

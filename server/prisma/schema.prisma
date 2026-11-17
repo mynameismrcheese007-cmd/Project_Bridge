@@ -179,7 +179,6 @@ model Project {
   comments        Comment[]
   contactRequests ContactRequest[]
   offers          PaidOffer[]
-  securityAudits  SecurityAudit[]
 
   @@index([status, createdAt])
   @@index([status, publishedAt])
@@ -428,22 +427,4 @@ model RoleRequest {
   createdAt    DateTime  @default(now())
 
   @@index([status, createdAt])
-}
-
-/// Security audit of a submission or revision (FR13, NFR-S4): the automatic scan an Admin sees
-/// before approving. One row per scan, so the history of a project's checks is kept.
-model SecurityAudit {
-  id         String   @id @default(cuid())
-  projectId  String
-  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  /// Set when the scan was of a pending revision rather than the project itself.
-  revisionId String?
-  /// WELL | SUSPICIOUS | DANGEROUS
-  verdict    String
-  /// Array of { code, severity, field, message, excerpt }.
-  findings   Json
-  createdAt  DateTime @default(now())
-
-  @@index([projectId, createdAt])
-  @@index([verdict, createdAt])
 }

@@ -90,7 +90,7 @@ describe('Audit in the review flow', () => {
   it('records a WELL audit on submission without alerting anyone', async () => {
     const { ownerAgent, adminAgent, admin, id } = await setup();
     expect((await ownerAgent.post(`/api/projects/${id}/submit`).send({ ownershipDeclared: true })).status).toBe(200);
-    expect(await prisma.securityAudit.findMany({ where: { projectId: id } })).toMatchObject([{ verdict: 'WELL', revisionId: null }]);
+    expect(await prisma.auditLog.findMany({ where: { action: 'SECURITY_AUDIT', targetId: id } })).toMatchObject([{ newValue: 'WELL', oldValue: null, reason: null }]);
     expect(await prisma.notification.count({ where: { recipientId: admin.id, eventType: 'SECURITY_ALERT' } })).toBe(0);
 
     const queue = await adminAgent.get('/api/admin/reviews');
@@ -142,7 +142,7 @@ describe('Audit in the review flow', () => {
 
     expect((await ownerAgent.patch(`/api/projects/${id}`).send({ overview: `${COMPLETE_PROJECT.overview} <script>alert(1)</script>` })).status).toBe(200);
     const revision = await prisma.projectRevision.findFirstOrThrow({ where: { projectId: id } });
-    expect(await prisma.securityAudit.findFirst({ where: { revisionId: revision.id } })).toMatchObject({ verdict: 'DANGEROUS' });
+    expect(await prisma.auditLog.findFirst({ where: { action: 'SECURITY_AUDIT', oldValue: revision.id } })).toMatchObject({ newValue: 'DANGEROUS', reason: 'SCRIPT_TAG' });
 
     const queue = await adminAgent.get('/api/admin/reviews');
     expect(queue.body.revisions[0].security.verdict).toBe('DANGEROUS');
