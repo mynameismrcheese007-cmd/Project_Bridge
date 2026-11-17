@@ -95,6 +95,9 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   @@index([action, createdAt])
+  /// A record's history (the project tracker, an account's Admin history).
+  @@index([targetType, targetId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 /// In-app notice for one person (DFD 8.0). Clients poll for these.
@@ -304,6 +307,7 @@ model Comment {
   updatedAt DateTime @updatedAt
 
   @@index([projectId, createdAt])
+  @@index([authorId])
 }
 
 /// A request to start a private conversation (FR10). Sent about a project (to its owner) or to a user.
@@ -380,6 +384,7 @@ model Message {
   createdAt      DateTime     @default(now())
 
   @@index([conversationId, createdAt])
+  @@index([senderId])
 }
 
 /// A paid contribution offer on a project (FR11). The platform processes no payments.
@@ -409,6 +414,7 @@ model PaidOffer {
 
   @@index([projectId, reviewStatus, status])
   @@index([reviewStatus, createdAt])
+  @@index([authorId])
 }
 
 /// An Uploader asking to become a Professional (FR15). Only an Admin decides.

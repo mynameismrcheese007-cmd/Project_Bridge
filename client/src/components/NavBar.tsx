@@ -22,11 +22,16 @@ export function NavBar() {
         .then((res) => !cancelled && setUnread(res.count))
         .catch(() => undefined);
     refresh();
-    const timer = window.setInterval(refresh, 60_000);
+    // NFR-P4: a new notice shows within 30 seconds while the page is open. A hidden tab does not
+    // ask at all, and catches up the moment it is looked at again.
+    const timer = window.setInterval(() => !document.hidden && refresh(), 30_000);
+    const onVisible = () => !document.hidden && refresh();
+    document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('notifications-changed', refresh);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('notifications-changed', refresh);
     };
   }, [user?.id, location.pathname]);

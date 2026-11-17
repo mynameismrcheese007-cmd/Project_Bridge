@@ -489,7 +489,7 @@ describe('Exact field lists', () => {
 
     it('workspace: the owner sees the whole team list, naming only those who accepted, and no emails', async () => {
       const { body } = await agents.owner.get(`/api/projects/${live.id}/workspace`);
-      expect(fields(body)).toEqual(['media', 'members', 'milestones', 'myRole', 'progress', 'project', 'revision']);
+      expect(fields(body)).toEqual(['activity', 'media', 'members', 'milestones', 'myRole', 'progress', 'project', 'revision', 'stageSince']);
       expect(fields(body.project)).toEqual(sorted(PROJECT));
       expect(fields(body.project.owner)).toEqual(['name']);
       expect(fields(body.revision)).toEqual(['createdAt', 'demoUrl', 'id', 'overview', 'problem', 'reviewNote', 'status', 'summary', 'tags', 'title']);
@@ -687,7 +687,7 @@ describe('Mutating routes', () => {
   it.each(['owner', 'editor'] as const)('PATCH project as the %s returns the workspace and nothing more', async (viewer) => {
     const res = await agents[viewer].patch(`/api/projects/${editable.id}`).send({ stage: 'PILOT' });
     expect(res.status).toBe(200);
-    expect(fields(res.body)).toEqual(['media', 'members', 'milestones', 'myRole', 'progress', 'project', 'revision']);
+    expect(fields(res.body)).toEqual(['activity', 'media', 'members', 'milestones', 'myRole', 'progress', 'project', 'revision', 'stageSince']);
     // The fixture's rows share one createdAt, so their order is not fixed.
     const accepted = res.body.members.find((m: { status: string }) => m.status === 'ACCEPTED');
     expect(fields(accepted)).toEqual(['id', 'name', 'status', 'userId']);

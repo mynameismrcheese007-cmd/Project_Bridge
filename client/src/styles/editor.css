@@ -1,0 +1,164 @@
+/* The project editor: the form beside a panel that shows what is saved and what is still missing. */
+.page-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 18rem);
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: start;
+  max-width: 1080px;
+}
+.editor-side {
+  position: sticky;
+  top: calc(61px + var(--space-5));
+}
+.editor-panel {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+.editor-save {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.editor-save-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  background: var(--ok);
+  transition: background-color 0.3s var(--ease-in-out);
+}
+.editor-save-dirty .editor-save-dot {
+  background: var(--warn);
+}
+.editor-panel-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.editor-ready {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+}
+.editor-ready b {
+  font-size: var(--step-3);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.editor-ready > i {
+  flex: 1;
+  height: 2px;
+  background: var(--line);
+}
+.editor-ready > i > i {
+  display: block;
+  height: 100%;
+  background: var(--signal);
+  transform-origin: left;
+  transition: transform 0.7s var(--ease-out);
+}
+.editor-checks {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--step--1);
+}
+.editor-checks li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem;
+  align-items: start;
+  color: var(--ink-2);
+}
+.editor-checks small {
+  display: block;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+}
+.editor-check {
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.1rem;
+  border: 1px solid var(--line-strong);
+  font-size: 0.7rem;
+  transition:
+    background-color 0.3s var(--ease-in-out),
+    border-color 0.3s var(--ease-in-out);
+}
+.editor-checks .is-done {
+  color: var(--ink);
+}
+.is-done .editor-check {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: var(--paper);
+}
+.editor-panel-note {
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/* A place to drop image files. */
+.dropzone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px dashed var(--line-strong);
+  transition:
+    border-color 0.25s var(--ease-in-out),
+    background-color 0.25s var(--ease-in-out);
+}
+.dropzone.is-over {
+  border-color: var(--signal);
+  border-style: solid;
+  background: var(--signal-soft);
+}
+.dropzone-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--step--1);
+}
+
+@media (max-width: 900px) {
+  .page-editor {
+    grid-template-columns: 1fr;
+  }
+  /* On a phone the panel comes first, as a short summary above the form. */
+  .editor-side {
+    position: static;
+    order: -1;
+  }
+  .editor-checks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

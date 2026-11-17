@@ -114,7 +114,8 @@ export default function Landing({ latest }: { latest?: ProjectCard }) {
         if (statement) {
           SplitText.create(statement, {
             type: 'words',
-            aria: 'auto',
+            // Whole words in reading order are read correctly as they are; a paragraph may not carry a label.
+            aria: 'none',
             autoSplit: true,
             onSplit: (self) =>
               gsap.fromTo(

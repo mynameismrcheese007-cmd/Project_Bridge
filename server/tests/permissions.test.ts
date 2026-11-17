@@ -48,6 +48,7 @@ const PROJECT_ROUTES: ListedRoute[] = [
   { method: 'post', path: '/:id/progress', gate: 'edit', body: { body: 'An update.' } },
   { method: 'delete', path: '/:id/progress/:entryId', gate: 'edit' },
   { method: 'post', path: '/:id/milestones', gate: 'edit', body: { title: 'A milestone' } },
+  { method: 'put', path: '/:id/milestones/order', gate: 'edit', body: { ids: [] } },
   { method: 'patch', path: '/:id/milestones/:milestoneId', gate: 'edit', body: { status: 'DONE' } },
   { method: 'delete', path: '/:id/milestones/:milestoneId', gate: 'edit' },
   { method: 'post', path: '/:id/members', gate: 'edit', body: { email: 'someone@example.com' } },

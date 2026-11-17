@@ -165,3 +165,53 @@ describe('Bulletin completion', () => {
     expect((await owner.patch(url).send({ completion: null })).body.project.completion).toBeNull();
   });
 });
+
+describe('Project tracker', () => {
+  it('records stage moves and milestone changes, and shows them to the team as activity', async () => {
+    const { project, ownerAgent } = await publishedSetup();
+    const url = `/api/projects/${project.id}`;
+    expect((await ownerAgent.patch(url).send({ stage: 'MVP' })).status).toBe(200);
+    // Saving the same stage again is not a move.
+    await ownerAgent.patch(url).send({ stage: 'MVP' });
+    const { body: made } = await ownerAgent.post(`${url}/milestones`).send({ title: 'Pilot on one route' });
+    await ownerAgent.patch(`${url}/milestones/${made.id}`).send({ status: 'IN_PROGRESS' });
+    // A new title or date alone is not a status change.
+    await ownerAgent.patch(`${url}/milestones/${made.id}`).send({ title: 'Pilot on two routes' });
+    await ownerAgent.patch(`${url}/milestones/${made.id}`).send({ status: 'DONE' });
+    await ownerAgent.delete(`${url}/milestones/${made.id}`);
+
+    const { body } = await ownerAgent.get(`${url}/workspace`);
+    expect(body.activity.map((e: { kind: string; from: string | null; to: string | null }) => [e.kind, e.from, e.to])).toEqual([
+      ['MILESTONE_REMOVED', 'DONE', null],
+      ['MILESTONE_STATUS', 'IN_PROGRESS', 'DONE'],
+      ['MILESTONE_STATUS', 'PLANNED', 'IN_PROGRESS'],
+      ['MILESTONE_ADDED', null, 'PLANNED'],
+      ['STAGE_CHANGED', project.stage, 'MVP'],
+    ]);
+    expect(body.activity[1]).toMatchObject({ title: 'Pilot on two routes' });
+    expect(Object.keys(body.activity[0]).sort()).toEqual(['actorName', 'at', 'from', 'id', 'kind', 'title', 'to']);
+    expect(body.stageSince).toBe(body.activity[4].at);
+  });
+
+  it('reorders milestones, and refuses an order that is not exactly this project\u2019s milestones', async () => {
+    const { project, ownerAgent, proAgent } = await publishedSetup();
+    const url = `/api/projects/${project.id}/milestones`;
+    const ids: string[] = [];
+    for (const title of ['First', 'Second', 'Third']) ids.push((await ownerAgent.post(url).send({ title })).body.id);
+
+    expect((await ownerAgent.put(`${url}/order`).send({ ids: [ids[2], ids[0], ids[1]] })).status).toBe(200);
+    const titles = async () => (await ownerAgent.get(`/api/projects/${project.id}/workspace`)).body.milestones.map((m: { title: string }) => m.title);
+    expect(await titles()).toEqual(['Third', 'First', 'Second']);
+    // A milestone added afterwards goes to the end.
+    await ownerAgent.post(url).send({ title: 'Fourth' });
+    expect(await titles()).toEqual(['Third', 'First', 'Second', 'Fourth']);
+
+    const all = (await ownerAgent.get(`/api/projects/${project.id}/workspace`)).body.milestones.map((m: { id: string }) => m.id);
+    for (const bad of [all.slice(1), [...all.slice(1), all[1]], [...all.slice(1), 'not-a-milestone']]) {
+      expect((await ownerAgent.put(`${url}/order`).send({ ids: bad })).status).toBe(400);
+    }
+    // Someone outside the team cannot tell the project's workspace exists.
+    expect((await proAgent.put(`${url}/order`).send({ ids: all })).status).toBe(404);
+    expect(await titles()).toEqual(['Third', 'First', 'Second', 'Fourth']);
+  });
+});

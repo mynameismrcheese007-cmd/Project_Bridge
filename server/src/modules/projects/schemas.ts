@@ -91,6 +91,9 @@ const milestoneFields = {
 };
 export const milestoneSchema = z.object(milestoneFields).partial().required({ title: true });
 export const milestoneUpdateSchema = z.object(milestoneFields).partial();
+export const milestoneOrderSchema = z.object({
+  ids: z.array(z.string().min(1).max(40)).max(200, 'Too many milestones.'),
+});
 
 export const reviewNoteSchema = z.object({
   note: z.string({ required_error: 'Explain what needs to change.' }).trim().min(3, 'Explain what needs to change.').max(1000),

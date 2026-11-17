@@ -128,6 +128,19 @@ export interface Workspace {
   members: Array<{ id: string; userId: string; name: string; status: 'ACCEPTED' } | { id: string; userId?: undefined; name?: undefined; status: 'INVITED' | 'DECLINED' }>;
   milestones: Array<{ id: string; title: string; status: MilestoneStatus; dueDate: string | null }>;
   progress: Array<{ id: string; body: string; createdAt: string; authorName: string }>;
+  /** What the tracker recorded by itself: stage moves and milestone changes, newest first. */
+  activity: Array<{
+    id: string;
+    kind: 'STAGE_CHANGED' | 'MILESTONE_ADDED' | 'MILESTONE_STATUS' | 'MILESTONE_REMOVED';
+    /** The milestone's title, for milestone events. */
+    title: string | null;
+    from: string | null;
+    to: string | null;
+    at: string;
+    actorName: string;
+  }>;
+  /** When the project entered its current stage, if the tracker saw it happen. */
+  stageSince: string | null;
 }
 
 export interface MyProject {

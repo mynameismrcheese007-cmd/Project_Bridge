@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { api, ApiError, MILESTONE_LABELS, STATUS_LABELS, type MilestoneStatus, type Workspace } from '../api';
+import { api, ApiError, STATUS_LABELS, type Workspace } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Alert } from '../components/Alert';
 import { Avatar } from '../components/Avatar';
 import { FormField } from '../components/FormField';
 import { TextAreaField } from '../components/FormControls';
 import { ProjectBulletin } from '../components/ProjectBulletin';
+import { ProjectTimeline, ProjectTracker } from '../components/ProjectTracker';
 import { SkeletonList } from '../components/ui/Skeleton';
 import { Icon } from '../components/Icon';
 import { useRevealChildren } from '../motion';
@@ -24,7 +25,6 @@ export function ProjectManage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [update, setUpdate] = useState('');
-  const [milestone, setMilestone] = useState({ title: '', dueDate: '' });
   const [inviteEmail, setInviteEmail] = useState('');
 
   const reload = useCallback(async () => {
@@ -65,11 +65,6 @@ export function ProjectManage() {
     if (await run('progress', () => api(`/projects/${id}/progress`, { body: { body: update } }), 'Progress update posted.')) setUpdate('');
   }
 
-  async function addMilestone(e: FormEvent) {
-    e.preventDefault();
-    if (await run('milestone', () => api(`/projects/${id}/milestones`, { body: milestone }))) setMilestone({ title: '', dueDate: '' });
-  }
-
   async function invite(e: FormEvent) {
     e.preventDefault();
     const email = inviteEmail;
@@ -97,7 +92,7 @@ export function ProjectManage() {
   const removed = ws.project.status === 'REMOVED';
 
   return (
-    <main className="page page-narrow stack" ref={sections}>
+    <main className="page page-manage stack" ref={sections}>
       <Link to="/my-projects" className="back-link">
         <Icon name="arrow-left" /> My projects
       </Link>
@@ -107,89 +102,29 @@ export function ProjectManage() {
           <span className={`badge ${STATUS_LABELS[ws.project.status].badge}`}>{STATUS_LABELS[ws.project.status].label}</span>
           <Link to={`/projects/${id}/edit`}>Edit content</Link>
         </div>
-        <p className="muted small">Progress, milestones and team changes appear right away. They do not need Admin review.</p>
+        <p className="muted small">Stage, milestones, updates and team changes appear right away. They do not need Admin review.</p>
       </header>
       {message && <Alert tone={message.tone}>{message.text}</Alert>}
 
-      <ProjectBulletin title={ws.project.title} stage={ws.project.stage} milestones={ws.milestones} progress={ws.progress} completion={ws.project.completion} />
-
-      <section className="card card-pad stack" aria-labelledby="milestones-title">
-        <h2 id="milestones-title">Milestones</h2>
-        {ws.milestones.length === 0 && <p className="muted">No milestones yet.</p>}
-        <ul className="list">
-          {ws.milestones.map((m) => (
-            <li key={m.id} className="list-row">
-              <div>
-                <strong>{m.title}</strong>
-                {m.dueDate && <div className="muted small">Due {new Date(m.dueDate).toLocaleDateString()}</div>}
-              </div>
-              <div className="row">
-                <label className="visually-hidden" htmlFor={`ms-${m.id}`}>
-                  Status of {m.title}
-                </label>
-                <select
-                  id={`ms-${m.id}`}
-                  className="input input-sm"
-                  value={m.status}
-                  disabled={busy || removed}
-                  onChange={(e) => run('milestone', () => api(`/projects/${id}/milestones/${m.id}`, { method: 'PATCH', body: { status: e.target.value } }))}
-                >
-                  {(Object.keys(MILESTONE_LABELS) as MilestoneStatus[]).map((s) => (
-                    <option key={s} value={s}>
-                      {MILESTONE_LABELS[s]}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  aria-label={`Delete milestone ${m.title}`}
-                  disabled={busy}
-                  onClick={() => run('milestone', () => api(`/projects/${id}/milestones/${m.id}`, { method: 'DELETE' }))}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-        {!removed && (
-          <form className="row align-end" onSubmit={addMilestone} noValidate>
-            <FormField label="New milestone" value={milestone.title} maxLength={120} error={errors['milestone.title']} onChange={(e) => setMilestone((m) => ({ ...m, title: e.target.value }))} />
-            <FormField label="Due date (optional)" type="date" value={milestone.dueDate} onChange={(e) => setMilestone((m) => ({ ...m, dueDate: e.target.value }))} />
-            <button type="submit" className="btn btn-secondary" disabled={busy}>
-              Add
-            </button>
-          </form>
-        )}
-      </section>
+      <ProjectTracker projectId={id} workspace={ws} onChanged={reload} locked={removed} />
 
       <section className="card card-pad stack" aria-labelledby="progress-title">
-        <h2 id="progress-title">Progress updates</h2>
+        <h2 id="progress-title">Development timeline</h2>
         {!removed && (
           <form className="form" onSubmit={addUpdate} noValidate>
-            <TextAreaField label="Post an update" rows={3} maxLength={2000} value={update} error={errors['progress.body']} onChange={(e) => setUpdate(e.target.value)} />
+            <TextAreaField label="Post an update" rows={3} maxLength={2000} value={update} error={errors['progress.body']} onChange={(e) => setUpdate(e.target.value)} hint="What changed, what you learned, what comes next. Professionals see these on the project page." />
             <button type="submit" className="btn btn-secondary" style={{ alignSelf: 'flex-start' }} disabled={busy || !update.trim()}>
               Post update
             </button>
           </form>
         )}
-        <ul className="progress-list">
-          {ws.progress.map((p) => (
-            <li key={p.id}>
-              <div className="row space-between">
-                <span className="muted small">
-                  {p.authorName} · {new Date(p.createdAt).toLocaleDateString()}
-                </span>
-                <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => run('progress', () => api(`/projects/${id}/progress/${p.id}`, { method: 'DELETE' }))}>
-                  Delete
-                </button>
-              </div>
-              <p>{p.body}</p>
-            </li>
-          ))}
-        </ul>
+        <ProjectTimeline workspace={ws} busy={busy} onDeleteUpdate={(entryId) => void run('progress', () => api(`/projects/${id}/progress/${entryId}`, { method: 'DELETE' }))} />
       </section>
+
+      <details className="card card-pad bulletin-preview">
+        <summary>How the bulletin looks on the project page</summary>
+        <ProjectBulletin title={ws.project.title} stage={ws.project.stage} milestones={ws.milestones} progress={ws.progress} completion={ws.project.completion} />
+      </details>
 
       <section className="card card-pad stack" aria-labelledby="team-title">
         <h2 id="team-title">Team</h2>

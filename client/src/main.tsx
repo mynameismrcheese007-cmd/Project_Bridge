@@ -11,6 +11,7 @@ import './styles/primitives.css';
 import './styles/motion.css';
 import './styles/pages.css';
 import './styles/sharp.css';
+import './styles/editor.css';
 import { applyStoredTheme } from './lib/theme';
 
 applyStoredTheme();

@@ -184,15 +184,21 @@ discoveryRouter.get('/suggest', requireAuth, async (req, res) => {
 
 /** Tag chips for the search filters (tags are part of the Guest card, so guests get them too): tags in use on published projects, most common first. */
 discoveryRouter.get('/tags', async (_req, res) => {
-  const rows = await prisma.project.findMany({ where: ELIGIBLE, select: { tags: true } });
-  const counts = new Map<string, number>();
-  for (const { tags } of rows) for (const tag of tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
-  const items = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 40)
-    .map(([tag, count]) => ({ tag, count }));
+  // Counted in the database: one grouped query instead of loading every published project's tags.
+  const [tagRows, projects] = await Promise.all([
+    prisma.$queryRaw<Array<{ tag: string; n: bigint }>>`
+      SELECT t.tag AS tag, COUNT(*) AS n
+      FROM "Project" p, unnest(p."tags") AS t(tag)
+      WHERE p."status" = 'PUBLISHED'
+      GROUP BY t.tag
+      ORDER BY n DESC, t.tag ASC
+      LIMIT 40`,
+    prisma.project.count({ where: ELIGIBLE }),
+  ]);
+  // The same for everyone and slow to change, so browsers may reuse it for half a minute.
+  res.set('Cache-Control', 'public, max-age=30');
   // The landing page shows how many projects are published; the number is public either way.
-  res.json({ items, projects: rows.length });
+  res.json({ items: tagRows.map((r) => ({ tag: r.tag, count: Number(r.n) })), projects });
 });
 
 /** FR12: what a share link shows. The same for everyone, and free of the guest card budget. */

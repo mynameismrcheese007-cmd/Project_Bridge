@@ -11,6 +11,7 @@ import {
   createProjectSchema,
   deleteSchema,
   inviteSchema,
+  milestoneOrderSchema,
   milestoneSchema,
   milestoneUpdateSchema,
   progressSchema,
@@ -139,6 +140,11 @@ projectsRouter.delete('/:id/progress/:entryId', requirePermission('edit'), async
 projectsRouter.post('/:id/milestones', requirePermission('edit'), validateBody(milestoneSchema), async (req, res) => {
   const milestone = await projects.addMilestone(req.user!, param(req, 'id'), req.body);
   res.status(201).json({ id: milestone.id });
+});
+
+projectsRouter.put('/:id/milestones/order', requirePermission('edit'), validateBody(milestoneOrderSchema), async (req, res) => {
+  await projects.reorderMilestones(req.user!, param(req, 'id'), req.body.ids);
+  res.json({ ok: true });
 });
 
 projectsRouter.patch('/:id/milestones/:milestoneId', requirePermission('edit'), validateBody(milestoneUpdateSchema), async (req, res) => {

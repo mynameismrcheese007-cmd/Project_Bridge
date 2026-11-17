@@ -42,6 +42,7 @@ Gates: **Public** needs no sign-in. **requireAuth** needs any signed-in account 
 | POST | `/api/projects/:id/progress` | requirePermission(edit) | Owner or accepted editor, else 404 | permissions, publish, maintain, hideDelete, security |
 | DELETE | `/api/projects/:id/progress/:entryId` | requirePermission(edit) | Owner or accepted editor, else 404 | permissions, publish, maintain, hideDelete, security |
 | POST | `/api/projects/:id/milestones` | requirePermission(edit) | Owner or accepted editor, else 404 | permissions, publish, maintain, hideDelete, security |
+| PUT | `/api/projects/:id/milestones/order` | requirePermission(edit) | Owner or accepted editor, else 404 | permissions, publish, maintain, hideDelete, security |
 | PATCH | `/api/projects/:id/milestones/:milestoneId` | requirePermission(edit) | Owner or accepted editor, else 404 | permissions, publish, maintain, hideDelete, security |
 | DELETE | `/api/projects/:id/milestones/:milestoneId` | requirePermission(edit) | Owner or accepted editor, else 404 | permissions, publish, maintain, hideDelete, security |
 | POST | `/api/projects/:id/members` | requirePermission(edit) | Owner or accepted editor, else 404 | permissions, publish, maintain, hideDelete, security |
@@ -149,7 +150,7 @@ Gates: **Public** needs no sign-in. **requireAuth** needs any signed-in account 
 |---|---|---|---|---|
 | GET | `/p/:id` | Public | Published only; Guest card fields, HTML-escaped | sharing |
 
-88 routes in all.
+89 routes in all.
 
 ## Checked and left as they are
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { api, ApiError, STAGE_LABELS, STAGES, STATUS_LABELS, upload, type Stage, type Workspace } from '../api';
 import { useAuth } from '../auth/AuthContext';
@@ -48,6 +48,55 @@ function formFrom(ws: Workspace): Form {
   };
 }
 
+/** What the server requires before a project can be submitted (completeProjectSchema), in the reader's words. */
+function readiness(form: Form): Array<{ label: string; done: boolean; hint: string }> {
+  let secureLink = false;
+  try {
+    secureLink = new URL(form.demoUrl.trim()).protocol === 'https:';
+  } catch {
+    secureLink = false;
+  }
+  return [
+    { label: 'Title', done: form.title.trim().length >= 3, hint: 'At least 3 characters' },
+    { label: 'Summary', done: form.summary.trim().length >= 10, hint: 'At least 10 characters' },
+    { label: 'Problem', done: form.problem.trim().length >= 20, hint: 'At least 20 characters' },
+    { label: 'Solution / overview', done: form.overview.trim().length >= 50, hint: 'At least 50 characters' },
+    { label: 'Tags', done: form.tags.length >= 1, hint: 'At least one' },
+    { label: 'Demonstration link', done: secureLink, hint: 'A full https:// link' },
+  ];
+}
+
+/** A place to drop image files; the button inside it still opens the file picker. */
+function Dropzone({ onFiles, disabled, children }: { onFiles: (files: FileList) => void; disabled?: boolean; children: ReactNode }) {
+  const [over, setOver] = useState(false);
+  const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer.types).includes('Files');
+  return (
+    <div
+      className={`dropzone${over ? ' is-over' : ''}`}
+      onDragOver={(e) => {
+        if (disabled || !hasFiles(e)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        setOver(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(false);
+      }}
+      onDrop={(e) => {
+        if (disabled || !hasFiles(e)) return;
+        e.preventDefault();
+        setOver(false);
+        if (e.dataTransfer.files.length) onFiles(e.dataTransfer.files);
+      }}
+    >
+      {children}
+      <p className="dropzone-hint" aria-hidden="true">
+        <Icon name="upload" /> or drop image files here
+      </p>
+    </div>
+  );
+}
+
 /** FR02 create/edit a draft, preview and submit; FR03 propose changes to a live project. */
 export function ProjectEditor() {
   const { id } = useParams();
@@ -61,6 +110,10 @@ export function ProjectEditor() {
   const [busy, setBusy] = useState(false);
   const [declared, setDeclared] = useState(false);
   const [loading, setLoading] = useState(Boolean(id));
+  // What the server last accepted, to tell whether there is anything unsaved.
+  const [savedForm, setSavedForm] = useState<Form>(EMPTY);
+  const [saveState, setSaveState] = useState<{ kind: 'idle' | 'saving' | 'saved' | 'failed'; at?: Date }>({ kind: 'idle' });
+  const autosaving = useRef(false);
   // A new project's images wait here and upload as soon as the draft exists.
   const [pendingCover, setPendingCover] = useState<File | null>(null);
   const [pendingShots, setPendingShots] = useState<File[]>([]);
@@ -79,6 +132,7 @@ export function ProjectEditor() {
       .then((res) => {
         setWs(res);
         setForm(formFrom(res));
+        setSavedForm(formFrom(res));
       })
       .catch((err) => setMessage({ tone: 'error', text: err instanceof ApiError ? err.message : 'Could not load the project.' }))
       .finally(() => setLoading(false));
@@ -91,6 +145,42 @@ export function ProjectEditor() {
   const isOwner = !ws || ws.myRole === 'OWNER';
   /** Images are the showcase: changeable on a draft and on a live project, not while in review. */
   const canEditImages = isDraft || isLive;
+  const dirty = JSON.stringify(form) !== JSON.stringify(savedForm);
+  const checks = readiness(form);
+  const ready = checks.filter((c) => c.done).length;
+
+  // Drafts save themselves a few seconds after the last change. Live projects never do: saving
+  // one sends the change to Admin review, which must be a deliberate act.
+  useEffect(() => {
+    if (!id || !isDraft || !dirty || busy || !form.title.trim()) return;
+    const timer = window.setTimeout(async () => {
+      if (autosaving.current) return;
+      autosaving.current = true;
+      const sent = form;
+      setSaveState({ kind: 'saving' });
+      try {
+        const res = await api<Workspace>(`/projects/${id}`, { method: 'PATCH', body: sent });
+        // The form is left alone: the person may have typed more while this was on its way.
+        setWs(res);
+        setSavedForm(sent);
+        setSaveState({ kind: 'saved', at: new Date() });
+      } catch (err) {
+        if (err instanceof ApiError) setErrors(err.fields);
+        setSaveState({ kind: 'failed' });
+      } finally {
+        autosaving.current = false;
+      }
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [id, isDraft, dirty, busy, form]);
+
+  // Closing the tab with unsaved work asks first.
+  useEffect(() => {
+    if (!dirty && !pendingCover && pendingShots.length === 0) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty, pendingCover, pendingShots.length]);
 
   function pickCover(files: FileList | null) {
     const file = files?.[0];
@@ -116,14 +206,14 @@ export function ProjectEditor() {
     if (pendingCover) {
       const data = new FormData();
       data.append('cover', pendingCover);
-      await upload(`/projects/${projectId}/cover`, data).catch(() => failed.push('the cover image'));
+      await upload(`/projects/${projectId}/cover`, data).catch((err) => failed.push(`the cover image was not accepted (${err instanceof ApiError ? err.message : 'upload failed'})`));
     }
     if (pendingShots.length) {
       const data = new FormData();
       for (const file of pendingShots) data.append('screenshots', file);
-      await upload(`/projects/${projectId}/media`, data).catch(() => failed.push('the screenshots'));
+      await upload(`/projects/${projectId}/media`, data).catch((err) => failed.push(`the screenshots were not accepted (${err instanceof ApiError ? err.message : 'upload failed'})`));
     }
-    return failed.length ? `${failed.join(' and ')} could not be uploaded.` : null;
+    return failed.length ? `${failed.join(' and ')}.` : null;
   }
 
   function set<K extends keyof Form>(key: K, value: Form[K]) {
@@ -151,6 +241,8 @@ export function ProjectEditor() {
       const res = await api<Workspace>(`/projects/${id}`, { method: 'PATCH', body: form });
       setWs(res);
       setForm(formFrom(res));
+      setSavedForm(formFrom(res));
+      setSaveState({ kind: 'saved', at: new Date() });
       return true;
     } catch (err) {
       fail(err, 'Could not save the project.');
@@ -188,6 +280,10 @@ export function ProjectEditor() {
 
   async function onUpload(files: FileList | null) {
     if (!id || !files?.length) return;
+    const problem = Array.from(files).map(imageProblem).find(Boolean);
+    if (problem) return setMessage({ tone: 'error', text: problem });
+    const room = MAX_SCREENSHOTS - (ws?.media.length ?? 0);
+    if (files.length > room) return setMessage({ tone: 'error', text: `A project can have at most ${MAX_SCREENSHOTS} screenshots. There is room for ${room} more.` });
     const data = new FormData();
     for (const file of Array.from(files)) data.append('screenshots', file);
     setBusy(true);
@@ -203,6 +299,8 @@ export function ProjectEditor() {
 
   async function onUploadCover(files: FileList | null) {
     if (!id || !files?.length) return;
+    const problem = imageProblem(files[0]);
+    if (problem) return setMessage({ tone: 'error', text: problem });
     const data = new FormData();
     data.append('cover', files[0]);
     setBusy(true);
@@ -262,8 +360,24 @@ export function ProjectEditor() {
 
   const revision = ws?.revision;
 
+  const saveNote =
+    saveState.kind === 'saving'
+      ? 'Saving…'
+      : dirty
+        ? saveState.kind === 'failed'
+          ? 'Not saved: check the highlighted fields'
+          : isDraft && id
+            ? 'Unsaved changes, saving shortly'
+            : 'Unsaved changes'
+        : saveState.kind === 'saved' && saveState.at
+          ? `Saved at ${saveState.at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+          : id
+            ? 'All changes saved'
+            : 'Not created yet';
+
   return (
-    <main className="page page-narrow stack">
+    <main className="page page-editor">
+      <div className="editor-main stack">
       <Link to="/my-projects" className="back-link">
         <Icon name="arrow-left" /> My projects
       </Link>
@@ -274,7 +388,7 @@ export function ProjectEditor() {
             <span className={`badge ${STATUS_LABELS[status].badge}`}>{STATUS_LABELS[status].label}</span>
             {revision?.status === 'PENDING' && <span className="badge badge-navy">Changes in review</span>}
             <Link to={`/projects/${id}/preview`}>Preview</Link>
-            <Link to={`/projects/${id}/manage`}>Progress &amp; team</Link>
+            <Link to={`/projects/${id}/manage`}>Tracker &amp; team</Link>
           </div>
         )}
       </header>
@@ -343,7 +457,7 @@ export function ProjectEditor() {
             type="url"
             inputMode="url"
             placeholder="https://"
-            hint="A secure (https://) link to a live demo, video or prototype."
+            hint="A secure (https://) link to a live demo, video or prototype. Link to a page, not to a file download or a shortened link: those are held back by the security check."
             value={form.demoUrl}
             error={errors.demoUrl}
             onChange={(e) => set('demoUrl', e.target.value)}
@@ -364,7 +478,7 @@ export function ProjectEditor() {
                 <div className="cover-preview" style={{ background: coverFor({ tags: form.tags, title: form.title || 'P' }) }}>
                   {coverPreview ? <img src={coverPreview} alt="Chosen cover image" /> : <span className="muted small">No cover yet</span>}
                 </div>
-                <div className="row">
+                <Dropzone onFiles={pickCover}>
                   <label className="btn btn-secondary btn-sm file-button">
                     {pendingCover ? 'Replace cover' : 'Choose cover image'}
                     <input type="file" accept={IMAGE_TYPES.join(',')} className="visually-hidden" onChange={(e) => { pickCover(e.target.files); e.target.value = ''; }} />
@@ -374,7 +488,7 @@ export function ProjectEditor() {
                       Remove
                     </button>
                   )}
-                </div>
+                </Dropzone>
               </div>
               <div className="stack">
                 <strong className="small">
@@ -393,10 +507,12 @@ export function ProjectEditor() {
                   </ul>
                 )}
                 {pendingShots.length < MAX_SCREENSHOTS && (
-                  <label className="btn btn-secondary btn-sm file-button">
-                    Choose screenshots
-                    <input type="file" accept={IMAGE_TYPES.join(',')} multiple className="visually-hidden" onChange={(e) => { pickShots(e.target.files); e.target.value = ''; }} />
-                  </label>
+                  <Dropzone onFiles={pickShots}>
+                    <label className="btn btn-secondary btn-sm file-button">
+                      Choose screenshots
+                      <input type="file" accept={IMAGE_TYPES.join(',')} multiple className="visually-hidden" onChange={(e) => { pickShots(e.target.files); e.target.value = ''; }} />
+                    </label>
+                  </Dropzone>
                 )}
               </div>
             </div>
@@ -421,7 +537,7 @@ export function ProjectEditor() {
             {ws.project.thumbnailUrl ? <img src={ws.project.thumbnailUrl} alt="Cover image" /> : <span className="muted small">No cover yet</span>}
           </div>
           {canEditImages && (
-            <div className="row">
+            <Dropzone onFiles={(f) => void onUploadCover(f)} disabled={busy}>
               <label className="btn btn-secondary file-button">
                 {ws.project.thumbnailUrl ? 'Replace cover' : 'Add cover image'}
                 <input
@@ -440,7 +556,7 @@ export function ProjectEditor() {
                   Remove
                 </button>
               )}
-            </div>
+            </Dropzone>
           )}
         </section>
       )}
@@ -468,20 +584,22 @@ export function ProjectEditor() {
             </ul>
           )}
           {canEditImages && ws.media.length < MAX_SCREENSHOTS && (
-            <label className="btn btn-secondary file-button">
-              Add screenshots
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                multiple
-                className="visually-hidden"
-                disabled={busy}
-                onChange={(e) => {
-                  void onUpload(e.target.files);
-                  e.target.value = '';
-                }}
-              />
-            </label>
+            <Dropzone onFiles={(f) => void onUpload(f)} disabled={busy}>
+              <label className="btn btn-secondary file-button">
+                Add screenshots ({ws.media.length}/{MAX_SCREENSHOTS})
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                  className="visually-hidden"
+                  disabled={busy}
+                  onChange={(e) => {
+                    void onUpload(e.target.files);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </Dropzone>
           )}
         </section>
       )}
@@ -501,7 +619,17 @@ export function ProjectEditor() {
                 onChange={setDeclared}
                 error={errors.ownershipDeclared}
               />
-              <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} disabled={busy} onClick={onSubmitForReview}>
+              {ready < checks.length && (
+                <p className="muted small">
+                  Still needed before it can be submitted:{' '}
+                  {checks
+                    .filter((c) => !c.done)
+                    .map((c) => c.label.toLowerCase())
+                    .join(', ')}
+                  .
+                </p>
+              )}
+              <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} disabled={busy || ready < checks.length || !declared} onClick={onSubmitForReview}>
                 {busy ? 'Submitting…' : 'Save and submit for review'}
               </button>
             </>
@@ -510,6 +638,43 @@ export function ProjectEditor() {
           )}
         </section>
       )}
+      </div>
+
+      <aside className="editor-side" aria-label="Progress of this project">
+        <div className="editor-panel">
+          <p className={`editor-save editor-save-${dirty ? 'dirty' : 'clean'}`} role="status">
+            <span className="editor-save-dot" aria-hidden="true" />
+            {saveNote}
+          </p>
+          <h2 className="editor-panel-title">Ready to submit</h2>
+          <p className="editor-ready">
+            <b>
+              {ready}/{checks.length}
+            </b>
+            <i aria-hidden="true">
+              <i style={{ transform: `scaleX(${ready / checks.length})` }} />
+            </i>
+          </p>
+          <ul className="editor-checks">
+            {checks.map((c) => (
+              <li key={c.label} className={c.done ? 'is-done' : ''}>
+                <span className="editor-check" aria-hidden="true">
+                  {c.done && <Icon name="check" />}
+                </span>
+                <span>
+                  {c.label}
+                  <span className="visually-hidden">{c.done ? ': done' : ': missing'}</span>
+                  {!c.done && <small>{c.hint}</small>}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="editor-panel-note">
+            Optional: {(id ? Boolean(ws?.project.thumbnailUrl) : Boolean(pendingCover)) ? 'cover added' : 'no cover yet'}, {id ? (ws?.media.length ?? 0) : pendingShots.length}/{MAX_SCREENSHOTS} screenshots.
+          </p>
+          <p className="editor-panel-note">Every submission gets an automatic security check and an Admin review before it is published.</p>
+        </div>
+      </aside>
     </main>
   );
 }

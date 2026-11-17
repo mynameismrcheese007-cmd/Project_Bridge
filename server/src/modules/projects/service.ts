@@ -22,6 +22,16 @@ function projectAudit(action: string, actor: AuthUser, projectId: string, reason
   return audit({ action, actorId: actor.id, targetType: 'Project', targetId: projectId, reason }, client);
 }
 
+/**
+ * The project tracker's history: stage moves and milestone changes, kept in the audit log so the
+ * team can see how the work developed. Shown in the workspace next to the written updates.
+ */
+const TRACKER_EVENTS = ['STAGE_CHANGED', 'MILESTONE_ADDED', 'MILESTONE_STATUS', 'MILESTONE_REMOVED'] as const;
+
+function trackerEvent(action: (typeof TRACKER_EVENTS)[number], actor: AuthUser, projectId: string, detail: { reason?: string; oldValue?: string; newValue?: string }) {
+  return audit({ action, actorId: actor.id, targetType: 'Project', targetId: projectId, ...detail });
+}
+
 function contentOf(source: Content): Content {
   return {
     title: source.title,
@@ -71,8 +81,10 @@ export async function updateProject(user: AuthUser, id: string, input: ProjectIn
   const { project } = await loadProjectFor(user, id, 'edit');
   assertEditable(project);
 
+  const stageMoved = input.stage !== undefined && input.stage !== project.stage;
   if (EDITABLE_DRAFT_STATUSES.includes(project.status)) {
     await prisma.project.update({ where: { id }, data: input });
+    if (stageMoved) await trackerEvent('STAGE_CHANGED', user, id, { oldValue: project.stage, newValue: input.stage });
     return;
   }
 
@@ -80,6 +92,7 @@ export async function updateProject(user: AuthUser, id: string, input: ProjectIn
   const { stage, publicDemo, completion, ...contentPatch } = input;
   if (stage !== undefined || publicDemo !== undefined || completion !== undefined) {
     await prisma.project.update({ where: { id }, data: { stage, publicDemo, completion } });
+    if (stageMoved) await trackerEvent('STAGE_CHANGED', user, id, { oldValue: project.stage, newValue: stage });
   }
   const touched = CONTENT_FIELDS.filter((f) => contentPatch[f] !== undefined);
   if (touched.length === 0 || !LIVE_STATUSES.includes(project.status)) return;
@@ -157,7 +170,7 @@ function revisionView(r: ProjectRevision) {
  */
 export async function workspace(user: AuthUser, id: string) {
   const { project, isOwner } = await loadProjectFor(user, id, 'edit');
-  const [revision, media, members, milestones, progress] = await Promise.all([
+  const [revision, media, members, milestones, progress, events] = await Promise.all([
     prisma.projectRevision.findFirst({
       where: { projectId: id, status: { in: ['PENDING', 'REJECTED'] } },
       orderBy: { updatedAt: 'desc' },
@@ -170,6 +183,11 @@ export async function workspace(user: AuthUser, id: string) {
     }),
     prisma.milestone.findMany({ where: { projectId: id }, orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] }),
     prisma.progressEntry.findMany({ where: { projectId: id }, orderBy: { createdAt: 'desc' } }),
+    prisma.auditLog.findMany({
+      where: { targetType: 'Project', targetId: id, action: { in: [...TRACKER_EVENTS] } },
+      orderBy: { createdAt: 'desc' },
+      take: 60,
+    }),
   ]);
   const owner = await prisma.user.findUniqueOrThrow({ where: { id: project.ownerId }, select: { name: true } });
   const names = new Map([[project.ownerId, owner.name], ...members.map((m) => [m.userId, m.user.name] as const)]);
@@ -215,6 +233,17 @@ export async function workspace(user: AuthUser, id: string) {
       createdAt: e.createdAt.toISOString(),
       authorName: names.get(e.authorId) ?? 'Former member',
     })),
+    // Newest first. `title` is the milestone's name; `from` and `to` are stages or milestone statuses.
+    activity: events.map((e) => ({
+      id: e.id,
+      kind: e.action,
+      title: e.reason,
+      from: e.oldValue,
+      to: e.newValue,
+      at: e.createdAt.toISOString(),
+      actorName: (e.actorId && names.get(e.actorId)) || 'Former member',
+    })),
+    stageSince: events.find((e) => e.action === 'STAGE_CHANGED')?.createdAt.toISOString() ?? null,
   };
 }
 
@@ -351,8 +380,10 @@ export async function deleteProgress(user: AuthUser, id: string, entryId: string
 export async function addMilestone(user: AuthUser, id: string, input: { title: string; status?: string; dueDate?: Date | null }) {
   const { project } = await loadProjectFor(user, id, 'edit');
   assertNotRemoved(project);
-  const position = await prisma.milestone.count({ where: { projectId: id } });
-  return prisma.milestone.create({ data: { ...input, projectId: id, position } });
+  const last = await prisma.milestone.findFirst({ where: { projectId: id }, orderBy: { position: 'desc' }, select: { position: true } });
+  const milestone = await prisma.milestone.create({ data: { ...input, projectId: id, position: (last?.position ?? -1) + 1 } });
+  await trackerEvent('MILESTONE_ADDED', user, id, { reason: milestone.title, newValue: milestone.status });
+  return milestone;
 }
 
 export async function updateMilestone(
@@ -363,14 +394,32 @@ export async function updateMilestone(
 ) {
   const { project } = await loadProjectFor(user, id, 'edit');
   assertNotRemoved(project);
-  const { count } = await prisma.milestone.updateMany({ where: { id: milestoneId, projectId: id }, data: input });
-  if (count === 0) throw new HttpError(404, 'NOT_FOUND', 'Milestone not found.');
+  const before = await prisma.milestone.findFirst({ where: { id: milestoneId, projectId: id } });
+  if (!before) throw new HttpError(404, 'NOT_FOUND', 'Milestone not found.');
+  await prisma.milestone.update({ where: { id: milestoneId }, data: input });
+  if (input.status !== undefined && input.status !== before.status) {
+    await trackerEvent('MILESTONE_STATUS', user, id, { reason: input.title ?? before.title, oldValue: before.status, newValue: input.status });
+  }
+}
+
+/** Sets the order of every milestone at once; the list must name each of the project's milestones exactly once. */
+export async function reorderMilestones(user: AuthUser, id: string, ids: string[]) {
+  const { project } = await loadProjectFor(user, id, 'edit');
+  assertNotRemoved(project);
+  const existing = await prisma.milestone.findMany({ where: { projectId: id }, select: { id: true } });
+  const known = new Set(existing.map((m) => m.id));
+  if (ids.length !== known.size || new Set(ids).size !== ids.length || !ids.every((m) => known.has(m))) {
+    throw new HttpError(400, 'VALIDATION_ERROR', 'The order must list each milestone of this project exactly once.');
+  }
+  await prisma.$transaction(ids.map((milestoneId, position) => prisma.milestone.update({ where: { id: milestoneId }, data: { position } })));
 }
 
 export async function deleteMilestone(user: AuthUser, id: string, milestoneId: string) {
   await loadProjectFor(user, id, 'edit');
-  const { count } = await prisma.milestone.deleteMany({ where: { id: milestoneId, projectId: id } });
-  if (count === 0) throw new HttpError(404, 'NOT_FOUND', 'Milestone not found.');
+  const milestone = await prisma.milestone.findFirst({ where: { id: milestoneId, projectId: id } });
+  if (!milestone) throw new HttpError(404, 'NOT_FOUND', 'Milestone not found.');
+  await prisma.milestone.delete({ where: { id: milestoneId } });
+  await trackerEvent('MILESTONE_REMOVED', user, id, { reason: milestone.title, oldValue: milestone.status });
 }
 
 // ---------------------------------------------------------------- FR03: team
