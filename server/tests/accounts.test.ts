@@ -264,6 +264,95 @@ describe('AT01.1 Email confirmation at sign-up', () => {
   });
 });
 
+describe('AT01.2 Changing the password while signed in', () => {
+  const NEW_PASSWORD = 'FreshPass7!';
+  const change = (agent: ReturnType<typeof request.agent>, body: Record<string, string>) => agent.post('/api/auth/me/password').send(body);
+
+  it('changes it, keeps this device signed in and signs out every other one', async () => {
+    const user = await createUser();
+    const here = await signedInAgent(user.email);
+    const elsewhere = await signedInAgent(user.email);
+
+    const res = await change(here, { currentPassword: PASSWORD, newPassword: NEW_PASSWORD });
+
+    expect(res.status).toBe(200);
+    expect((await here.get('/api/auth/me')).status).toBe(200);
+    expect((await elsewhere.get('/api/auth/me')).status).toBe(401);
+    expect((await request(app).post('/api/auth/login').send({ email: user.email, password: PASSWORD })).status).toBe(401);
+    expect((await request(app).post('/api/auth/login').send({ email: user.email, password: NEW_PASSWORD })).status).toBe(200);
+    expect(await prisma.auditLog.count({ where: { action: 'PASSWORD_CHANGED', targetId: user.id } })).toBe(1);
+  });
+
+  it('refuses a wrong current password and changes nothing', async () => {
+    const user = await createUser();
+    const here = await signedInAgent(user.email);
+    const elsewhere = await signedInAgent(user.email);
+    const before = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+
+    const res = await change(here, { currentPassword: 'NotMyPassword7!', newPassword: NEW_PASSWORD });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('WRONG_PASSWORD');
+    expect(Object.keys(res.body.error.fields)).toEqual(['currentPassword']);
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).toEqual(before);
+    expect((await elsewhere.get('/api/auth/me')).status).toBe(200);
+    expect(await prisma.auditLog.count({ where: { action: 'PASSWORD_CHANGE_FAILED', targetId: user.id } })).toBe(1);
+  });
+
+  it('applies the new-password rules and refuses the same password again', async () => {
+    const user = await createUser();
+    const here = await signedInAgent(user.email);
+
+    const weak = await change(here, { currentPassword: PASSWORD, newPassword: 'weakpassword' });
+    expect(weak.status).toBe(400);
+    expect(Object.keys(weak.body.error.fields)).toEqual(['newPassword']);
+
+    const same = await change(here, { currentPassword: PASSWORD, newPassword: PASSWORD });
+    expect(same.status).toBe(400);
+    expect(same.body.error.fields.newPassword).toContain('different');
+  });
+
+  it('cancels an unused reset link from before the change', async () => {
+    const user = await createUser();
+    const here = await signedInAgent(user.email);
+    await request(app).post('/api/auth/forgot-password').send({ email: user.email });
+    const token = tokenFromLastResetMail();
+
+    expect((await change(here, { currentPassword: PASSWORD, newPassword: NEW_PASSWORD })).status).toBe(200);
+
+    const reset = await request(app).post('/api/auth/reset-password').send({ token, password: 'SomeoneElse7!' });
+    expect(reset.status).toBe(400);
+    expect(reset.body.error.code).toBe('INVALID_TOKEN');
+  });
+
+  it('tells a Google-only account to set a password by email instead', async () => {
+    const user = await prisma.user.create({ data: { name: 'Google Person', email: 'google-only@example.com', googleId: 'google-only-sub', emailVerifiedAt: new Date() } });
+    googleAccounts.set('only', { sub: 'google-only-sub', email: user.email, emailVerified: true, name: user.name });
+    const agent = request.agent(app);
+    expect((await agent.post('/api/auth/google').send({ credential: 'google:only'.padEnd(30, 'x') })).status).toBe(200);
+
+    const res = await change(agent, { currentPassword: 'anything', newPassword: NEW_PASSWORD });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('NO_PASSWORD');
+  });
+
+  it('a RESTRICTED account may still secure itself; a Guest gets 401', async () => {
+    const user = await createUser({ status: 'RESTRICTED' });
+    const here = await signedInAgent(user.email);
+    expect((await change(here, { currentPassword: PASSWORD, newPassword: NEW_PASSWORD })).status).toBe(200);
+    expect((await change(request.agent(app), { currentPassword: PASSWORD, newPassword: NEW_PASSWORD })).status).toBe(401);
+  });
+
+  it('limits repeated wrong current passwords per account', async () => {
+    const user = await createUser();
+    const here = await signedInAgent(user.email);
+    const statuses: number[] = [];
+    for (let i = 0; i < 6; i++) statuses.push((await change(here, { currentPassword: `Wrong${i}Pass!`, newPassword: NEW_PASSWORD })).status);
+    expect(statuses.slice(0, 5)).toEqual([400, 400, 400, 400, 400]);
+    expect(statuses[5]).toBe(429);
+  });
+});
+
 describe('AT01.2 Sign in / sign out', () => {
   it('signs in with an httpOnly session cookie, exposes /me, and signs out', async () => {
     const user = await createUser();

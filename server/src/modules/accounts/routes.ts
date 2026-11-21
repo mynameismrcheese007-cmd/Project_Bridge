@@ -4,12 +4,12 @@ import { config } from '../../config.js';
 import { toSignInView } from '../../domain.js';
 import { HttpError } from '../../lib/errors.js';
 import { requireAuth, requirePermission } from '../../middleware/auth.js';
-import { authEmailLimiter, loginLimiter } from '../../middleware/rateLimit.js';
+import { authEmailLimiter, loginLimiter, passwordChangeLimiter } from '../../middleware/rateLimit.js';
 import { clearSessionCookie, setSessionCookie } from '../../middleware/session.js';
 import { validateBody } from '../../middleware/validate.js';
 import { ACCEPTED_IMAGE_TYPES } from '../projects/media.js';
 import * as profile from './profile.js';
-import { emailOnlySchema, googleSchema, loginSchema, registerSchema, resetPasswordSchema, tokenOnlySchema } from './schemas.js';
+import { changePasswordSchema, emailOnlySchema, googleSchema, loginSchema, registerSchema, resetPasswordSchema, tokenOnlySchema } from './schemas.js';
 import * as accounts from './service.js';
 
 /** FR01 / UC01: account access. */
@@ -94,6 +94,12 @@ accountsRouter.post('/me/cover', requirePermission('edit'), cover, async (req, r
 accountsRouter.delete('/me/cover', requirePermission('edit'), async (req, res) => {
   await profile.removeProfileCover(req.user!);
   res.status(204).end();
+});
+
+// Securing one's own account, so a RESTRICTED account may too. This device stays signed in; every other one is signed out.
+accountsRouter.post('/me/password', requireAuth, passwordChangeLimiter, validateBody(changePasswordSchema), async (req, res) => {
+  await accounts.changePassword(req.user!, req.sessionId!, req.body.currentPassword, req.body.newPassword);
+  res.json({ message: 'Your password has been changed. Every other device has been signed out.' });
 });
 
 accountsRouter.post('/forgot-password', authEmailLimiter, validateBody(emailOnlySchema), async (req, res) => {

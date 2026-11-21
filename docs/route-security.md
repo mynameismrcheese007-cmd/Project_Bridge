@@ -21,6 +21,7 @@ Gates: **Public** needs no sign-in. **requireAuth** needs any signed-in account 
 | GET | `/api/auth/me/profile` | requireAuth | Own account only | profile, security, views |
 | POST | `/api/auth/me/cover` | requirePermission(edit) | Own account only | profile, security, views |
 | DELETE | `/api/auth/me/cover` | requirePermission(edit) | Own account only | profile, security, views |
+| POST | `/api/auth/me/password` | requireAuth | Own account only | profile, security, views |
 | POST | `/api/auth/forgot-password` | Public | None: public, rate limited | accounts, hardening |
 | POST | `/api/auth/reset-password` | Public | None: public, rate limited | accounts, hardening |
 
@@ -152,7 +153,7 @@ Gates: **Public** needs no sign-in. **requireAuth** needs any signed-in account 
 |---|---|---|---|---|
 | GET | `/p/:id` | Public | Published only; Guest card fields, HTML-escaped | sharing |
 
-91 routes in all.
+92 routes in all.
 
 ## Checked and left as they are
 

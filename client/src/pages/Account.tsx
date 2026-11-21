@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { api, ApiError, ROLE_LABELS, STAGE_LABELS, STATUS_LABELS, upload, type MyProfile, type MyProject, type Role } from '../api';
 import { Alert } from '../components/Alert';
+import { FormField, PasswordChecklist } from '../components/FormField';
+import { Button } from '../components/ui/Button';
+import { passwordProblem } from '../passwordRules';
 import { TextDialog } from '../components/TextDialog';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
@@ -79,6 +82,8 @@ export function Account() {
         </dl>
       </section>
 
+      {user.hasPassword && <ChangePassword />}
+
       <PasswordRecovery email={user.email} hasPassword={user.hasPassword} />
 
       {user.role === 'UPLOADER' && <RoleRequest active={user.status === 'ACTIVE'} />}
@@ -154,6 +159,60 @@ function CoverPhoto({ url, canEdit, onChange }: { url: string | null; canEdit: b
   );
 }
 
+/** Changes the password with the current one; this device stays signed in, every other one is signed out. */
+function ChangePassword() {
+  const empty = { currentPassword: '', newPassword: '', confirm: '' };
+  const [form, setForm] = useState(empty);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const update = (key: keyof typeof form) => (e: ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setMessage(null);
+    const found: Record<string, string | undefined> = {
+      currentPassword: form.currentPassword ? undefined : 'Enter your current password.',
+      newPassword: passwordProblem(form.newPassword),
+      confirm: form.newPassword !== form.confirm ? 'Passwords do not match.' : undefined,
+    };
+    const problems = Object.fromEntries(Object.entries(found).filter(([, v]) => v)) as Record<string, string>;
+    setErrors(problems);
+    if (Object.keys(problems).length) return;
+    setBusy(true);
+    try {
+      const res = await api<{ message: string }>('/auth/me/password', { body: { currentPassword: form.currentPassword, newPassword: form.newPassword } });
+      setForm(empty);
+      setMessage({ tone: 'success', text: res.message });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setErrors(err.fields);
+        setMessage({ tone: 'error', text: err.message });
+      } else setMessage({ tone: 'error', text: 'Could not change the password.' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card card-pad stack" aria-labelledby="change-password-title">
+      <h2 id="change-password-title">Change password</h2>
+      <p className="muted">You stay signed in here. Every other device is signed out.</p>
+      {message && <Alert tone={message.tone}>{message.text}</Alert>}
+      <form className="form" onSubmit={submit} noValidate>
+        <FormField label="Current password" type="password" autoComplete="current-password" value={form.currentPassword} onChange={update('currentPassword')} error={errors.currentPassword} maxLength={128} required />
+        <FormField label="New password" type="password" autoComplete="new-password" value={form.newPassword} onChange={update('newPassword')} error={errors.newPassword} maxLength={128} required>
+          <PasswordChecklist value={form.newPassword} />
+        </FormField>
+        <FormField label="Confirm new password" type="password" autoComplete="new-password" value={form.confirm} onChange={update('confirm')} error={errors.confirm} required />
+        <Button type="submit" loading={busy} style={{ alignSelf: 'flex-start' }}>
+          Change password
+        </Button>
+      </form>
+    </section>
+  );
+}
+
 /** Mails a password reset link to the account's own address; the link proves the user owns it. */
 function PasswordRecovery({ email, hasPassword }: { email: string; hasPassword: boolean }) {
   const [busy, setBusy] = useState(false);
@@ -174,10 +233,10 @@ function PasswordRecovery({ email, hasPassword }: { email: string; hasPassword: 
 
   return (
     <section className="card card-pad stack" aria-labelledby="password-title">
-      <h2 id="password-title">Password</h2>
+      <h2 id="password-title">{hasPassword ? 'Forgot your password?' : 'Password'}</h2>
       <p className="muted">
         {hasPassword
-          ? 'Forgot your password, or want to change it? We will email a verification link to your address, and you can choose a new password from there. Every device will be signed out.'
+          ? 'We will email a verification link to your address, and you can choose a new password from there. Every device will be signed out.'
           : 'You sign in with Google. To also sign in with a password, we will email a verification link to your address so you can set one.'}
       </p>
       {message && <Alert tone={message.tone}>{message.text}</Alert>}

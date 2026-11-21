@@ -224,6 +224,34 @@ export async function logout(sessionId: string): Promise<void> {
   await prisma.session.deleteMany({ where: { id: sessionId } });
 }
 
+/**
+ * Changes the password of the signed-in account after checking the current one. Other sessions and
+ * unused reset links end with the old password; the session making the change is kept.
+ */
+export async function changePassword(user: AuthUser, sessionId: string, currentPassword: string, newPassword: string): Promise<void> {
+  const record = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+  if (!record.passwordHash) {
+    throw new HttpError(400, 'NO_PASSWORD', 'You sign in with Google and have no password yet. Use the emailed link to set one.');
+  }
+  if (!(await bcrypt.compare(currentPassword, record.passwordHash))) {
+    await audit('PASSWORD_CHANGE_FAILED', user.id);
+    throw new HttpError(400, 'WRONG_PASSWORD', 'Your current password is not correct.', { currentPassword: 'Your current password is not correct.' });
+  }
+  if (await bcrypt.compare(newPassword, record.passwordHash)) {
+    throw new HttpError(400, 'VALIDATION_ERROR', 'Choose a password different from your current one.', { newPassword: 'Choose a password different from your current one.' });
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, config.bcryptRounds);
+  await prisma.$transaction(async (tx) => {
+    // Conditional on the hash just checked, so a reset or Google link committed meanwhile wins.
+    const { count } = await tx.user.updateMany({ where: { id: user.id, passwordHash: record.passwordHash }, data: { passwordHash } });
+    if (count === 0) throw new HttpError(409, 'PASSWORD_CHANGED', 'Your password was changed elsewhere just now. Sign in again to continue.');
+    await tx.session.deleteMany({ where: { userId: user.id, id: { not: sessionId } } });
+    await tx.emailToken.deleteMany({ where: { userId: user.id, type: 'RESET', usedAt: null } });
+    await writeAudit({ action: 'PASSWORD_CHANGED', actorId: user.id, targetType: 'User', targetId: user.id }, tx);
+  }, TX_OPTIONS);
+}
+
 /** Always succeeds from the caller's view so it cannot be used to probe for accounts. */
 export async function forgotPassword(email: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { email } });

@@ -18,6 +18,17 @@ export const loginLimiter = rateLimit({
   message: message('Too many failed sign-in attempts. Please wait 15 minutes and try again.'),
 });
 
+/** Wrong current passwords on a signed-in account, so a session left open cannot be used to guess it. */
+export const passwordChangeLimiter = rateLimit({
+  windowMs: WINDOW_MS,
+  limit: config.loginMaxAttempts,
+  skipSuccessfulRequests: true,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user!.id,
+  message: message('Too many failed attempts. Please wait 15 minutes and try again.'),
+});
+
 /** Invites say whether an address has an account, so they get the same throttle as register, per signed-in user. */
 export const inviteLimiter = rateLimit({
   windowMs: WINDOW_MS,

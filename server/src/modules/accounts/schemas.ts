@@ -64,3 +64,8 @@ export const googleSchema = z.object({
 export const resetPasswordSchema = z.object({ token, password: newPassword });
 
 export const tokenOnlySchema = z.object({ token });
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string({ required_error: 'Enter your current password.' }).min(1, 'Enter your current password.').max(128),
+  newPassword,
+});

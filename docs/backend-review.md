@@ -32,7 +32,7 @@ The two paging bugs were fixed with step 7 on 22 Nov; the review queue now signs
 | M1 | Content policy page and report categories with a copyright option | NFR-L1 in the proposal; not built | 6 |
 | M2 | Page limits on every admin list, and "Load more" on the screens | Bugs above; queues must stay usable as data grows | 7 |
 | M3 | Tests on every push (GitHub Actions) | NFR-M3; also shows evidence of testing at the defence | 10 |
-| M4 | Change password while signed in | Today the only way is the forgot-password email, which examiners will notice | New, below |
+| M4 | Change password while signed in | **Done 22 Nov:** `POST /api/auth/me/password` and a form on the account page | New, below |
 | M5 | Clean shutdown and a health check that touches the database | Needed for the deployment guide (step 13): a host restarts the server, and `/api/health` answers `ok` even when the database is down | New, below |
 | M6 | One source for the Google button | It can show while the server has Google sign-in off, or the reverse | 9 |
 
