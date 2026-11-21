@@ -3,6 +3,7 @@ import express from 'express';
 import helmet from 'helmet';
 import { config } from './config.js';
 import { errorHandler, HttpError } from './lib/errors.js';
+import { databaseReachable } from './lib/prisma.js';
 import { checkOrigin, requireHttps } from './middleware/security.js';
 import { loadSession } from './middleware/session.js';
 import { accountsRouter } from './modules/accounts/routes.js';
@@ -32,8 +33,10 @@ export function createApp() {
   app.use(cookieParser());
   app.use(loadSession);
 
-  app.get('/api/health', (_req, res) => {
-    res.json({ ok: true });
+  // For the host and uptime checks: 503 when the database does not answer, so a broken server is not reported healthy.
+  app.get('/api/health', async (_req, res) => {
+    const up = await databaseReachable();
+    res.status(up ? 200 : 503).json({ ok: up, database: up ? 'up' : 'down' });
   });
   app.use('/api/auth', accountsRouter);
   // Owner/editor routes first, so /mine and /invites are not read as a project id.

@@ -48,6 +48,19 @@ export const prisma = new PrismaClient({ datasourceUrl: withTimeouts(process.env
 // Prisma's interactive defaults (2s to get a connection, 5s to finish) are too tight for the remote database.
 export const TX_OPTIONS = { maxWait: 15_000, timeout: 20_000 };
 
+/** True when the database answers a SELECT 1 within `timeoutMs`; never throws. */
+export async function databaseReachable(timeoutMs = 5000): Promise<boolean> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<false>((resolve) => {
+    timer = setTimeout(() => resolve(false), timeoutMs);
+  });
+  try {
+    return await Promise.race([prisma.$queryRaw`SELECT 1`.then(() => true, () => false), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const KEEP_ALIVE_MS = 3 * 60_000;
 
 /**

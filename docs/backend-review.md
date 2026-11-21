@@ -33,7 +33,7 @@ The two paging bugs were fixed with step 7 on 22 Nov; the review queue now signs
 | M2 | Page limits on every admin list, and "Load more" on the screens | Bugs above; queues must stay usable as data grows | 7 |
 | M3 | Tests on every push (GitHub Actions) | NFR-M3; also shows evidence of testing at the defence | 10 |
 | M4 | Change password while signed in | **Done 22 Nov:** `POST /api/auth/me/password` and a form on the account page | New, below |
-| M5 | Clean shutdown and a health check that touches the database | Needed for the deployment guide (step 13): a host restarts the server, and `/api/health` answers `ok` even when the database is down | New, below |
+| M5 | Clean shutdown and a health check that touches the database | **Done 22 Nov:** `/api/health` answers 503 when the database does not reply within 5 s; SIGTERM and SIGINT finish open requests (up to 10 s), stop the timers and close the database before exiting | New, below |
 | M6 | One source for the Google button | It can show while the server has Google sign-in off, or the reverse | 9 |
 
 ### Should (makes the project noticeably more solid)

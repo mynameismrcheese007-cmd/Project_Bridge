@@ -2,7 +2,8 @@ import { createApp } from './app.js';
 import { config } from './config.js';
 import { scheduleCleanup } from './lib/cleanup.js';
 import { assertEncryptionConfigured } from './lib/crypto.js';
-import { keepConnectionsAlive } from './lib/prisma.js';
+import { keepConnectionsAlive, prisma } from './lib/prisma.js';
+import { createShutdown } from './lib/shutdown.js';
 
 // The HTTPS redirect, Secure cookies and the checks below all depend on this, so a server missing it
 // must not start and look healthy without them. .env loads when config.js is imported above.
@@ -23,12 +24,18 @@ if (config.isProd) {
 }
 
 // Express 5 reports listen errors (e.g. port already in use) through this callback.
-createApp().listen(config.port, (error?: Error) => {
+const server = createApp().listen(config.port, (error?: Error) => {
   if (error) {
     console.error(`Could not start the API on port ${config.port}: ${error.message}`);
     process.exit(1);
   }
   console.log(`ProjectBridge API listening on http://localhost:${config.port}`);
-  keepConnectionsAlive();
-  scheduleCleanup();
+  const shutdown = createShutdown({
+    server,
+    stops: [keepConnectionsAlive(), scheduleCleanup()],
+    disconnect: () => prisma.$disconnect(),
+    exit: (code) => process.exit(code),
+  });
+  // Hosts send SIGTERM before a restart or redeploy; Ctrl+C sends SIGINT.
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => void shutdown(signal));
 });

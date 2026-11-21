@@ -123,7 +123,7 @@ describe('HTTPS redirect', () => {
   it('exempts only GET /api/health', async () => {
     const health = await request(prod).get('/api/health');
     expect(health.status).toBe(200);
-    expect(health.body).toEqual({ ok: true });
+    expect(health.body).toEqual({ ok: true, database: 'up' });
     expect((await request(prod).post('/api/health')).status).toBe(308);
   });
 
