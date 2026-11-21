@@ -1,6 +1,6 @@
 import type { Report } from '@prisma/client';
 import { z } from 'zod';
-import { REPORT_STATUSES, type AuthUser } from '../../domain.js';
+import { REPORT_CATEGORIES, REPORT_STATUSES, type AuthUser } from '../../domain.js';
 import { audit } from '../../lib/audit.js';
 import { decrypt } from '../../lib/crypto.js';
 import { HttpError } from '../../lib/errors.js';
@@ -11,6 +11,7 @@ import { REASON_CONTEXT } from '../reports/service.js';
 
 export const reportListQuery = z.object({
   status: z.enum(REPORT_STATUSES).default('OPEN'),
+  category: z.enum(REPORT_CATEGORIES).optional(),
   page: pageNumber,
 });
 
@@ -27,7 +28,10 @@ const reportView = (r: Report & { reporter: { name: string } }) => ({
   id: r.id,
   targetType: r.targetType,
   targetId: r.targetId,
+  category: r.category,
   reason: readReason(r.reason),
+  originalWorkUrl: r.originalWorkUrl,
+  copyrightDeclaredAt: r.copyrightDeclaredAt?.toISOString() ?? null,
   status: r.status,
   decisionNote: r.decisionNote,
   reporter: { name: r.reporter.name },
@@ -37,9 +41,9 @@ const reportView = (r: Report & { reporter: { name: string } }) => ({
 
 const REPORTER = { reporter: { select: { name: true } } };
 
-export async function listReports({ status, page }: z.infer<typeof reportListQuery>) {
+export async function listReports({ status, category, page }: z.infer<typeof reportListQuery>) {
   const rows = await prisma.report.findMany({
-    where: { status },
+    where: { status, ...(category ? { category } : {}) },
     orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     include: REPORTER,
     ...pageWindow(page),

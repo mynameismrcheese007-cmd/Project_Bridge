@@ -81,10 +81,11 @@ async function sendVerifyLink(email: string, name: string, token: string): Promi
  * sign-up and its link.
  */
 export async function register(input: { name: string; email: string; password: string }): Promise<void> {
+  // The schema only lets a ticked Content policy box through, so reaching here means they agreed.
   if (await prisma.user.findUnique({ where: { email: input.email } })) throw emailTaken();
   const passwordHash = await bcrypt.hash(input.password, config.bcryptRounds);
   const token = randomToken();
-  const pending = { name: input.name, passwordHash, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + config.verifyTokenTtlMs) };
+  const pending = { name: input.name, passwordHash, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + config.verifyTokenTtlMs), policyAcceptedAt: new Date() };
   await prisma.pendingRegistration.upsert({ where: { email: input.email }, create: { email: input.email, ...pending }, update: pending });
   // The pending sign-up stays, so "Send a new link" can try again once mail works.
   if (!(await sendVerifyLink(input.email, input.name, token))) {
@@ -116,7 +117,7 @@ export async function verifyEmail(token: string) {
     // Google sign-in may have created the account for this address in the meantime.
     if (await tx.user.findUnique({ where: { email: pending.email } })) throw emailTaken();
     const user = await tx.user.create({
-      data: { name: pending.name, email: pending.email, passwordHash: pending.passwordHash, role: 'UPLOADER', status: 'ACTIVE', emailVerifiedAt: now },
+      data: { name: pending.name, email: pending.email, passwordHash: pending.passwordHash, role: 'UPLOADER', status: 'ACTIVE', emailVerifiedAt: now, policyAcceptedAt: pending.policyAcceptedAt },
     });
     // Committed together, so a Google link that can see this account also removes its session.
     return createSession(user, tx);
@@ -182,7 +183,7 @@ async function linkGoogle(existing: User, googleId: string): Promise<User> {
  * Signs in with a Google ID token. The account is found by Google ID, otherwise linked by
  * email (Google has verified the address), otherwise created as a new Uploader.
  */
-export async function loginWithGoogle(credential: string) {
+export async function loginWithGoogle(credential: string, acceptPolicy = false) {
   if (!config.googleClientId) {
     throw new HttpError(503, 'GOOGLE_DISABLED', 'Google sign-in is not configured on this server.');
   }
@@ -205,11 +206,15 @@ export async function loginWithGoogle(credential: string) {
       user = await linkGoogle(byEmail, identity.sub);
       action = 'GOOGLE_LINKED';
     } else {
+      // A new account needs the Content policy agreed on the sign-up page (NFR-L1); nothing is written before that.
+      if (!acceptPolicy) {
+        throw new HttpError(403, 'POLICY_REQUIRED', 'There is no account for this Google address yet. To create one, agree to the Content policy on the sign-up page.');
+      }
       // Google has proven the address, so any sign-up still waiting for its link is dropped.
       [, user] = await prisma.$transaction([
         prisma.pendingRegistration.deleteMany({ where: { email: identity.email } }),
         prisma.user.create({
-          data: { name: identity.name.slice(0, 80), email: identity.email, googleId: identity.sub, role: 'UPLOADER', emailVerifiedAt: new Date() },
+          data: { name: identity.name.slice(0, 80), email: identity.email, googleId: identity.sub, role: 'UPLOADER', emailVerifiedAt: new Date(), policyAcceptedAt: new Date() },
         }),
       ]);
       action = 'USER_REGISTERED_GOOGLE';

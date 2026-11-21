@@ -198,7 +198,7 @@ describe('Origin check', () => {
   });
 
   it('passes GET from another origin', async () => {
-    const res = await request(testApp).get('/api/health').set('Origin', EVIL);
+    const res = await request(testApp).get('/api/auth/config').set('Origin', EVIL);
     expect(res.status).toBe(200);
   });
 
@@ -386,7 +386,7 @@ describe('needs the database', () => {
 
   it('stores a pending sign-up’s password as a bcrypt hash and its link token only as its SHA-256', async () => {
     const email = `hardening-pending-${stamp}@example.com`;
-    expect((await request(helpers.app).post('/api/auth/register').send({ name: 'Hardening Test', email, password: helpers.PASSWORD })).status).toBe(202);
+    expect((await request(helpers.app).post('/api/auth/register').send({ acceptPolicy: true, name: 'Hardening Test', email, password: helpers.PASSWORD })).status).toBe(202);
 
     const raw = helpers.tokenFromLastVerifyMail();
     const pending = await helpers.prisma.pendingRegistration.findUniqueOrThrow({ where: { email } });

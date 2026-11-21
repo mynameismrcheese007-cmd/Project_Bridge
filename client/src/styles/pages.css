@@ -498,3 +498,39 @@
   background: var(--paper);
   color: var(--ink);
 }
+
+/* ---------- Site footer and Content policy ---------- */
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding: 20px 16px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-3);
+  font-size: 0.9rem;
+}
+.site-footer nav {
+  display: flex;
+  gap: 16px;
+}
+.policy ul,
+.policy ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 6px;
+}
+.policy-categories {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.policy-categories dt {
+  font-weight: 600;
+}
+.policy-categories dd {
+  margin: 2px 0 0;
+  color: var(--ink-2);
+}

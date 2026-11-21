@@ -233,11 +233,27 @@ export interface ContactRequest {
   respondedAt: string | null;
 }
 
+export type ReportCategory = 'SPAM' | 'HARASSMENT' | 'INAPPROPRIATE' | 'COPYRIGHT' | 'PRIVACY' | 'MISLEADING' | 'OTHER';
+
+/** The same list and order as the server's REPORT_CATEGORIES; the Content policy page explains each. */
+export const REPORT_CATEGORY_LABELS: Record<ReportCategory, string> = {
+  SPAM: 'Spam',
+  HARASSMENT: 'Harassment or abuse',
+  INAPPROPRIATE: 'Inappropriate content',
+  COPYRIGHT: 'Copyright infringement',
+  PRIVACY: 'Privacy or personal data',
+  MISLEADING: 'Misleading or false',
+  OTHER: 'Other',
+};
+
 export interface AdminReport {
   id: string;
   targetType: 'PROJECT' | 'COMMENT' | 'OFFER' | 'USER' | 'CONVERSATION';
   targetId: string;
+  category: ReportCategory;
   reason: string | null;
+  originalWorkUrl: string | null;
+  copyrightDeclaredAt: string | null;
   status: 'OPEN' | 'CONFIRMED' | 'DISMISSED';
   decisionNote: string | null;
   reporter: { name: string };

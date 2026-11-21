@@ -4,11 +4,16 @@ import { config } from '../config.js';
 const message = (msg: string) => ({ error: { code: 'RATE_LIMITED', message: msg } });
 const WINDOW_MS = 15 * 60 * 1000;
 
-/** NFR-S1: failed sign-ins are limited per address and email; successful ones are not counted. */
+/**
+ * NFR-S1: failed sign-ins are limited per address and email. Only wrong credentials (401) count:
+ * a refusal such as "confirm your email" or "agree to the policy" guesses nothing, and Google
+ * sign-ins carry no email, so counting those would lock out everyone behind one campus address.
+ */
 export const loginLimiter = rateLimit({
   windowMs: WINDOW_MS,
   limit: config.loginMaxAttempts,
   skipSuccessfulRequests: true,
+  requestWasSuccessful: (_req, res) => res.statusCode !== 401,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   keyGenerator: (req) => {

@@ -48,6 +48,7 @@ export const registerSchema = z.object({
     .regex(NAME, 'Name may contain only letters, spaces, hyphens, apostrophes and periods.'),
   email: newEmail,
   password: newPassword,
+  acceptPolicy: z.literal(true, { errorMap: () => ({ message: 'Agree to the Content policy to create an account.' }) }),
 });
 
 export const loginSchema = z.object({
@@ -59,6 +60,8 @@ export const emailOnlySchema = z.object({ email });
 
 export const googleSchema = z.object({
   credential: z.string({ required_error: 'Google credential is missing.' }).min(20).max(4096),
+  /** Sent from the sign-up page; needed only when the Google sign-in creates a new account. */
+  acceptPolicy: z.boolean().optional(),
 });
 
 export const resetPasswordSchema = z.object({ token, password: newPassword });

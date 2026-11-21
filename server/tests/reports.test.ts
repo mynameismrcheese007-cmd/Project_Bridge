@@ -31,7 +31,7 @@ const agentFor = async (role: string, status = 'ACTIVE') => {
   const user = await createUser({ role, status });
   return { user, agent: await signedInAgent(user.email) };
 };
-const report = (targetType: string, targetId: string, reason = REASON) => ({ targetType, targetId, reason });
+const report = (targetType: string, targetId: string, reason = REASON, category = 'OTHER') => ({ targetType, targetId, category, reason });
 /** Approved offers on a published project, which a Professional can see and so can report. */
 async function offers(count: number) {
   const author = await createUser({ role: 'PROFESSIONAL' });
@@ -111,6 +111,100 @@ describe('Filing a report', () => {
     const blocked = await agent.post('/api/reports').send(report('OFFER', targets[10].id));
     expect(blocked.status).toBe(429);
     expect((await (await agentFor('PROFESSIONAL')).agent.post('/api/reports').send(report('OFFER', targets[10].id))).status).toBe(201);
+  });
+});
+
+describe('Report categories and copyright reports (NFR-L1)', () => {
+  const ORIGINAL = 'https://github.com/our-team/original-project';
+
+  async function setup() {
+    const { user: owner } = await agentFor('UPLOADER');
+    const project = await createProject(owner.id);
+    const { agent } = await agentFor('UPLOADER');
+    return { owner, project, agent };
+  }
+
+  it('needs a known category', async () => {
+    const { project, agent } = await setup();
+    const { category: _category, ...withoutCategory } = report('PROJECT', project.id);
+    for (const body of [withoutCategory, { ...withoutCategory, category: 'BORING' }]) {
+      const res = await agent.post('/api/reports').send(body);
+      expect(res.status).toBe(400);
+      expect(Object.keys(res.body.error.fields)).toEqual(['category']);
+    }
+    expect(await prisma.report.count()).toBe(0);
+  });
+
+  it('stores the category of an ordinary report, without copyright details', async () => {
+    const { project, agent } = await setup();
+    const res = await agent.post('/api/reports').send(report('PROJECT', project.id, REASON, 'SPAM'));
+    expect(res.status).toBe(201);
+    expect(await prisma.report.findUniqueOrThrow({ where: { id: res.body.id } })).toMatchObject({ category: 'SPAM', originalWorkUrl: null, copyrightDeclaredAt: null });
+  });
+
+  it('a copyright report needs the ownership statement, and records it with the link', async () => {
+    const { project, agent } = await setup();
+    const base = report('PROJECT', project.id, REASON, 'COPYRIGHT');
+
+    const unticked = await agent.post('/api/reports').send({ ...base, originalWorkUrl: ORIGINAL });
+    expect(unticked.status).toBe(400);
+    expect(Object.keys(unticked.body.error.fields)).toEqual(['ownsWork']);
+
+    const res = await agent.post('/api/reports').send({ ...base, originalWorkUrl: ORIGINAL, ownsWork: true });
+    expect(res.status).toBe(201);
+    const stored = await prisma.report.findUniqueOrThrow({ where: { id: res.body.id } });
+    expect(stored).toMatchObject({ category: 'COPYRIGHT', originalWorkUrl: ORIGINAL });
+    expect(stored.copyrightDeclaredAt).toBeInstanceOf(Date);
+  });
+
+  it('a copyright report may leave the link out', async () => {
+    const { project, agent } = await setup();
+    const res = await agent.post('/api/reports').send({ ...report('PROJECT', project.id, REASON, 'COPYRIGHT'), ownsWork: true, originalWorkUrl: '' });
+    expect(res.status).toBe(201);
+    expect((await prisma.report.findUniqueOrThrow({ where: { id: res.body.id } })).originalWorkUrl).toBeNull();
+  });
+
+  it.each(['javascript:alert(1)', 'ftp://files.example.com/x', 'not a link', `https://example.com/${'a'.repeat(500)}`])('refuses the link %s', async (url) => {
+    const { project, agent } = await setup();
+    const res = await agent.post('/api/reports').send({ ...report('PROJECT', project.id, REASON, 'COPYRIGHT'), ownsWork: true, originalWorkUrl: url });
+    expect(res.status).toBe(400);
+    expect(Object.keys(res.body.error.fields)).toEqual(['originalWorkUrl']);
+  });
+
+  it('refuses copyright for an account or a conversation', async () => {
+    const { owner } = await setup();
+    const { user, agent } = await agentFor('UPLOADER');
+    const conversation = await prisma.conversation.create({ data: { participants: { create: [{ userId: user.id }, { userId: owner.id }] } } });
+    for (const [type, id] of [['USER', owner.id], ['CONVERSATION', conversation.id]]) {
+      const res = await agent.post('/api/reports').send({ ...report(type, id, REASON, 'COPYRIGHT'), ownsWork: true });
+      expect(res.status).toBe(400);
+      expect(res.body.error.fields.category).toContain('copyright');
+    }
+  });
+
+  it('refuses copyright details on a report of another category', async () => {
+    const { project, agent } = await setup();
+    const res = await agent.post('/api/reports').send({ ...report('PROJECT', project.id, REASON, 'SPAM'), ownsWork: true, originalWorkUrl: ORIGINAL });
+    expect(res.status).toBe(400);
+    expect(Object.keys(res.body.error.fields)).toEqual(['category']);
+  });
+
+  it('shows Admins the category and copyright details, and filters by category', async () => {
+    const { project, agent } = await setup();
+    await agent.post('/api/reports').send({ ...report('PROJECT', project.id, REASON, 'COPYRIGHT'), ownsWork: true, originalWorkUrl: ORIGINAL });
+    const { agent: other } = await agentFor('UPLOADER');
+    await other.post('/api/reports').send(report('PROJECT', project.id, 'Advertising for an unrelated shop.', 'SPAM'));
+    const { agent: adminAgent } = await agentFor('ADMIN');
+
+    const copyright = await adminAgent.get('/api/admin/reports?category=COPYRIGHT');
+    expect(copyright.status).toBe(200);
+    expect(copyright.body.items).toHaveLength(1);
+    expect(copyright.body.items[0]).toMatchObject({ category: 'COPYRIGHT', originalWorkUrl: ORIGINAL, reason: REASON });
+    expect(copyright.body.items[0].copyrightDeclaredAt).toEqual(expect.any(String));
+
+    expect((await adminAgent.get('/api/admin/reports?category=SPAM')).body.items.map((r: { category: string }) => r.category)).toEqual(['SPAM']);
+    expect((await adminAgent.get('/api/admin/reports')).body.items).toHaveLength(2);
+    expect((await adminAgent.get('/api/admin/reports?category=BORING')).status).toBe(400);
   });
 });
 

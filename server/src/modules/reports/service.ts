@@ -43,14 +43,15 @@ async function assertReportable(user: AuthUser, targetType: string, targetId: st
 
 /** Files a report. It changes nothing about its target; only an Admin decision can. */
 export async function createReport(user: AuthUser, input: z.infer<typeof createReportSchema>) {
-  const { targetType, targetId, reason } = input;
+  const { targetType, targetId, category, reason, originalWorkUrl } = input;
   await assertReportable(user, targetType, targetId);
   const open = await prisma.report.findFirst({ where: { reporterId: user.id, targetType, targetId, status: 'OPEN' }, select: { id: true } });
   if (open) throw new HttpError(409, 'ALREADY_REPORTED', 'You already have an open report about this.');
 
   const encrypted = encrypt(reason, REASON_CONTEXT);
   return prisma.$transaction(async (tx) => {
-    const report = await tx.report.create({ data: { reporterId: user.id, targetType, targetId, reason: encrypted } });
+    const copyright = category === 'COPYRIGHT' ? { originalWorkUrl: originalWorkUrl ?? null, copyrightDeclaredAt: new Date() } : {};
+    const report = await tx.report.create({ data: { reporterId: user.id, targetType, targetId, category, reason: encrypted, ...copyright } });
     await audit({ action: 'REPORT_FILED', actorId: user.id, targetType: 'Report', targetId: report.id }, tx);
     return { id: report.id, status: report.status };
   }, TX_OPTIONS);

@@ -32,7 +32,7 @@ describe('AT01.1 Registration', () => {
     const agent = request.agent(app);
     const res = await agent
       .post('/api/auth/register')
-      .send({ name: 'Riyad', email: 'Riyad@Example.com ', password: PASSWORD });
+      .send({ acceptPolicy: true, name: 'Riyad', email: 'Riyad@Example.com ', password: PASSWORD });
 
     expect(res.status).toBe(202);
     expect(res.headers['set-cookie']).toBeUndefined();
@@ -73,7 +73,7 @@ describe('AT01.1 Registration', () => {
   });
 
   it('returns field-specific errors for invalid input', async () => {
-    const res = await request(app).post('/api/auth/register').send({ name: 'A', email: 'not-an-email', password: 'short' });
+    const res = await request(app).post('/api/auth/register').send({ acceptPolicy: true, name: 'A', email: 'not-an-email', password: 'short' });
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -86,19 +86,19 @@ describe('AT01.1 Registration', () => {
     ['a symbol', 'Riyad_Hossain'],
     ['two spaces', 'Riyad  Hossain'],
   ])('refuses a name with %s', async (_why, name) => {
-    const res = await request(app).post('/api/auth/register').send({ name, email: 'name-check@example.com', password: PASSWORD });
+    const res = await request(app).post('/api/auth/register').send({ acceptPolicy: true, name, email: 'name-check@example.com', password: PASSWORD });
     expect(res.status).toBe(400);
     expect(Object.keys(res.body.error.fields)).toEqual(['name']);
     expect(await prisma.user.count()).toBe(0);
   });
 
   it.each(['Md. Rakibul Hasan', "O'Brien-Smith", 'মোঃ রাকিবুল হাসান'])('accepts the name %s', async (name) => {
-    const res = await request(app).post('/api/auth/register').send({ name, email: 'name-ok@example.com', password: PASSWORD });
+    const res = await request(app).post('/api/auth/register').send({ acceptPolicy: true, name, email: 'name-ok@example.com', password: PASSWORD });
     expect(res.status).toBe(202);
   });
 
   it.each(['plain', 'a@b', 'a@b.c', 'a..b@example.com', 'a@exa_mple.com', '.a@example.com'])('refuses the email %s', async (email) => {
-    const res = await request(app).post('/api/auth/register').send({ name: 'Riyad', email, password: PASSWORD });
+    const res = await request(app).post('/api/auth/register').send({ acceptPolicy: true, name: 'Riyad', email, password: PASSWORD });
     expect(res.status).toBe(400);
     expect(Object.keys(res.body.error.fields)).toEqual(['email']);
   });
@@ -109,7 +109,7 @@ describe('AT01.1 Registration', () => {
     ['no digit', 'NoDigitsHere!', 'digit'],
     ['no symbol', 'NoSymbol123', 'symbol'],
   ])('refuses a new password with %s, on registration and on reset', async (_why, password, word) => {
-    const reg = await request(app).post('/api/auth/register').send({ name: 'Riyad', email: 'weak@example.com', password });
+    const reg = await request(app).post('/api/auth/register').send({ acceptPolicy: true, name: 'Riyad', email: 'weak@example.com', password });
     expect(reg.status).toBe(400);
     expect(reg.body.error.fields.password).toContain(word);
 
@@ -129,16 +129,69 @@ describe('AT01.1 Registration', () => {
     await createUser({ email: 'taken@example.com' });
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ name: 'Someone', email: 'TAKEN@example.com', password: PASSWORD });
+      .send({ acceptPolicy: true, name: 'Someone', email: 'TAKEN@example.com', password: PASSWORD });
 
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('EMAIL_TAKEN');
   });
 });
 
+describe('AT01.1 Agreeing to the Content policy at sign-up (NFR-L1)', () => {
+  const details = { name: 'Riyad', email: 'policy@example.com', password: PASSWORD };
+  const googleNew = { sub: 'google-policy-new', email: 'policy-google@example.com', emailVerified: true, name: 'Policy Person' };
+
+  it.each([[undefined], [false], ['yes']])('refuses sign-up when the box is not ticked (%s)', async (acceptPolicy) => {
+    const res = await request(app).post('/api/auth/register').send({ ...details, acceptPolicy });
+    expect(res.status).toBe(400);
+    expect(Object.keys(res.body.error.fields)).toEqual(['acceptPolicy']);
+    expect(await prisma.pendingRegistration.count()).toBe(0);
+    expect(mailer.outbox).toHaveLength(0);
+  });
+
+  it('records when the account holder agreed', async () => {
+    const before = Date.now();
+    await registerAndVerify(details);
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: details.email } });
+    expect(user.policyAcceptedAt?.getTime()).toBeGreaterThanOrEqual(before - 1000);
+  });
+
+  it('refuses to create a Google account without the agreement, and writes nothing', async () => {
+    googleAccounts.set('policy-new', googleNew);
+    const res = await request(app).post('/api/auth/google').send({ credential: 'google:policy-new'.padEnd(30, 'x') });
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('POLICY_REQUIRED');
+    expect(res.headers['set-cookie']).toBeUndefined();
+    expect(await prisma.user.count({ where: { email: googleNew.email } })).toBe(0);
+  });
+
+  it('creates the Google account with the agreement recorded', async () => {
+    googleAccounts.set('policy-new', googleNew);
+    const res = await request(app).post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:policy-new'.padEnd(30, 'x') });
+    expect(res.status).toBe(200);
+    expect((await prisma.user.findUniqueOrThrow({ where: { email: googleNew.email } })).policyAcceptedAt).toBeInstanceOf(Date);
+  });
+
+  it('does not count policy refusals as failed sign-ins, so Google sign-in stays open for everyone', async () => {
+    googleAccounts.set('policy-new', googleNew);
+    for (let i = 0; i < 7; i++) {
+      expect((await request(app).post('/api/auth/google').send({ credential: 'google:policy-new'.padEnd(30, 'x') })).status).toBe(403);
+    }
+    const user = await createUser({ email: 'policy-after@gmail.com' });
+    googleAccounts.set('policy-after', { sub: 'google-policy-after', email: user.email, emailVerified: true, name: user.name });
+    expect((await request(app).post('/api/auth/google').send({ credential: 'google:policy-after'.padEnd(30, 'x') })).status).toBe(200);
+  });
+
+  it('lets an existing account sign in with Google without ticking anything', async () => {
+    const user = await createUser({ email: 'policy-existing@gmail.com' });
+    googleAccounts.set('policy-existing', { sub: 'google-policy-existing', email: user.email, emailVerified: true, name: user.name });
+    const res = await request(app).post('/api/auth/google').send({ credential: 'google:policy-existing'.padEnd(30, 'x') });
+    expect(res.status).toBe(200);
+  });
+});
+
 describe('AT01.1 Email confirmation at sign-up', () => {
   const details = { name: 'Riyad', email: 'confirm@example.com', password: PASSWORD };
-  const signUp = (body: Record<string, string> = details) => request(app).post('/api/auth/register').send(body);
+  const signUp = (body: Record<string, unknown> = details) => request(app).post('/api/auth/register').send({ acceptPolicy: true, ...body });
   const useLink = (token: string, agent = request.agent(app)) => agent.post('/api/auth/verify-email').send({ token });
 
   it('confirms once: the same link cannot create a second account or session', async () => {
@@ -254,7 +307,7 @@ describe('AT01.1 Email confirmation at sign-up', () => {
     const token = tokenFromLastVerifyMail();
     googleAccounts.set('confirm', { sub: 'google-confirm', email: details.email, emailVerified: true, name: 'Riyad' });
 
-    const google = await request(app).post('/api/auth/google').send({ credential: 'google:confirm'.padEnd(30, 'x') });
+    const google = await request(app).post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:confirm'.padEnd(30, 'x') });
     expect(google.status).toBe(200);
     expect(await prisma.pendingRegistration.count()).toBe(0);
     expect((await prisma.user.findUniqueOrThrow({ where: { email: details.email } })).emailVerifiedAt).toBeInstanceOf(Date);
@@ -329,7 +382,7 @@ describe('AT01.2 Changing the password while signed in', () => {
     const user = await prisma.user.create({ data: { name: 'Google Person', email: 'google-only@example.com', googleId: 'google-only-sub', emailVerifiedAt: new Date() } });
     googleAccounts.set('only', { sub: 'google-only-sub', email: user.email, emailVerified: true, name: user.name });
     const agent = request.agent(app);
-    expect((await agent.post('/api/auth/google').send({ credential: 'google:only'.padEnd(30, 'x') })).status).toBe(200);
+    expect((await agent.post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:only'.padEnd(30, 'x') })).status).toBe(200);
 
     const res = await change(agent, { currentPassword: 'anything', newPassword: NEW_PASSWORD });
     expect(res.status).toBe(400);
@@ -409,7 +462,7 @@ describe('AT01.3 Sign in with Google', () => {
   it('creates a new UPLOADER without a password and signs them in', async () => {
     googleAccounts.set('new', identity);
     const agent = request.agent(app);
-    const res = await agent.post('/api/auth/google').send({ credential: 'google:new'.padEnd(30, 'x') });
+    const res = await agent.post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:new'.padEnd(30, 'x') });
 
     expect(res.status).toBe(200);
     expect(res.body.user).toMatchObject({ role: 'UPLOADER', hasPassword: false, googleLinked: true });
@@ -423,7 +476,7 @@ describe('AT01.3 Sign in with Google', () => {
   it('links Google to an existing password account with the same email', async () => {
     const existing = await createUser({ email: identity.email, role: 'PROFESSIONAL' });
     googleAccounts.set('link', identity);
-    const res = await request(app).post('/api/auth/google').send({ credential: 'google:link'.padEnd(30, 'x') });
+    const res = await request(app).post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:link'.padEnd(30, 'x') });
 
     expect(res.status).toBe(200);
     expect(res.body.user).toMatchObject({ id: existing.id, role: 'PROFESSIONAL', hasPassword: false, googleLinked: true });
@@ -433,7 +486,7 @@ describe('AT01.3 Sign in with Google', () => {
   it('keeps the role and a RESTRICTED status when linking', async () => {
     const existing = await createUser({ email: identity.email, role: 'PROFESSIONAL', status: 'RESTRICTED' });
     googleAccounts.set('link', identity);
-    const res = await request(app).post('/api/auth/google').send({ credential: 'google:link'.padEnd(30, 'x') });
+    const res = await request(app).post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:link'.padEnd(30, 'x') });
 
     expect(res.status).toBe(200);
     expect(res.body.user).toMatchObject({ id: existing.id, role: 'PROFESSIONAL', status: 'RESTRICTED', hasPassword: false });
@@ -446,7 +499,7 @@ describe('AT01.3 Sign in with Google', () => {
     const before = await prisma.user.update({ where: { id: user.id }, data: { status } });
 
     googleAccounts.set('blocked', identity);
-    const res = await request(app).post('/api/auth/google').send({ credential: 'google:blocked'.padEnd(30, 'x') });
+    const res = await request(app).post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:blocked'.padEnd(30, 'x') });
 
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('ACCOUNT_DISABLED');
@@ -462,20 +515,20 @@ describe('AT01.3 Sign in with Google', () => {
 
   it('refuses a Google account whose email is not verified', async () => {
     googleAccounts.set('unverified', { ...identity, emailVerified: false });
-    const res = await request(app).post('/api/auth/google').send({ credential: 'google:unverified'.padEnd(30, 'x') });
+    const res = await request(app).post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:unverified'.padEnd(30, 'x') });
     expect(res.status).toBe(403);
     expect(await prisma.user.count()).toBe(0);
   });
 
   it('rejects an invalid Google token', async () => {
-    const res = await request(app).post('/api/auth/google').send({ credential: 'google:forged'.padEnd(30, 'x') });
+    const res = await request(app).post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:forged'.padEnd(30, 'x') });
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe('INVALID_GOOGLE_TOKEN');
   });
 
   it('a Google-only account cannot sign in with a password', async () => {
     googleAccounts.set('only', identity);
-    await request(app).post('/api/auth/google').send({ credential: 'google:only'.padEnd(30, 'x') });
+    await request(app).post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:only'.padEnd(30, 'x') });
     const res = await request(app).post('/api/auth/login').send({ email: identity.email, password: 'anything123' });
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe('INVALID_CREDENTIALS');
@@ -497,7 +550,7 @@ describe('AT01.3 Google linking shuts out whoever registered the address first',
   async function signInWithGoogle() {
     googleAccounts.set('owner', owner);
     const agent = request.agent(app);
-    const res = await agent.post('/api/auth/google').send({ credential: 'google:owner'.padEnd(30, 'x') });
+    const res = await agent.post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:owner'.padEnd(30, 'x') });
     expect(res.status).toBe(200);
     return { agent, res };
   }
@@ -609,7 +662,7 @@ describe('AT01.3 Sign-ins and resets overtaken by a linking or password change',
   async function ownerSignsIn(email: string) {
     googleAccounts.set('owner', { sub: `google-${email}`, email, emailVerified: true, name: 'Real Owner' });
     const agent = request.agent(app);
-    const res = await agent.post('/api/auth/google').send({ credential: 'google:owner'.padEnd(30, 'x') });
+    const res = await agent.post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:owner'.padEnd(30, 'x') });
     expect(res.status).toBe(200);
     return agent;
   }
@@ -803,7 +856,7 @@ describe('AT01.3 Sign-ins and resets overtaken by a linking or password change',
     const email = 'race-register-link@gmail.com';
     let owner = request.agent(app);
     const registrant = request.agent(app);
-    expect((await registrant.post('/api/auth/register').send({ name: 'Attacker', email, password: ATTACKER_PASSWORD })).status).toBe(202);
+    expect((await registrant.post('/api/auth/register').send({ acceptPolicy: true, name: 'Attacker', email, password: ATTACKER_PASSWORD })).status).toBe(202);
     const token = tokenFromLastVerifyMail();
     const writeAudit = prisma.auditLog.create.bind(prisma.auditLog);
     // USER_REGISTERED is written straight after the account becomes visible to a linking.
@@ -896,7 +949,7 @@ describe('AT01.3 Sign-ins and resets overtaken by a linking or password change',
       expect(reset.status).toBe(200);
 
       single.googleAccounts.set('owner', { sub: `google-${email}`, email, emailVerified: true, name: 'Real Owner' });
-      const google = await single.request(single.app).post('/api/auth/google').send({ credential: 'google:owner'.padEnd(30, 'x') });
+      const google = await single.request(single.app).post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:owner'.padEnd(30, 'x') });
       expect(google.status).toBe(200);
       expect(await single.prisma.session.count({ where: { user: { email } } })).toBe(1);
     } finally {

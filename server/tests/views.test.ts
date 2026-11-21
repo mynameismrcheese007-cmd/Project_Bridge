@@ -656,7 +656,7 @@ describe('Mutating routes', () => {
   }
 
   it('register says only to check the email, and the link signs in cleanly', async () => {
-    const res = await request(app).post('/api/auth/register').send({ name: 'New Person', email: 'new-person@example.com', password: PASSWORD });
+    const res = await request(app).post('/api/auth/register').send({ acceptPolicy: true, name: 'New Person', email: 'new-person@example.com', password: PASSWORD });
     expect(res.status).toBe(202);
     expect(fields(res.body)).toEqual(['message']);
     const token = tokenFromLastVerifyMail();
@@ -683,7 +683,7 @@ describe('Mutating routes', () => {
 
   it('Google sign-in', async () => {
     googleAccounts.set('views', { sub: 'google-views-sub', email: 'google-views@example.com', emailVerified: true, name: 'Google Person' });
-    const res = await request(app).post('/api/auth/google').send({ credential: 'google:views'.padEnd(30, 'x') });
+    const res = await request(app).post('/api/auth/google').send({ acceptPolicy: true, credential: 'google:views'.padEnd(30, 'x') });
     expect(res.status).toBe(200);
     expectCleanSignIn(res, 'google-views@example.com');
     expect(JSON.stringify(res.body)).not.toContain('google-views-sub');
@@ -755,7 +755,7 @@ describe('Mutating routes', () => {
   });
 
   it('errors keep to code, message and fields, and do not echo an address', async () => {
-    const taken = await request(app).post('/api/auth/register').send({ name: 'Someone', email: users.owner.email, password: PASSWORD });
+    const taken = await request(app).post('/api/auth/register').send({ acceptPolicy: true, name: 'Someone', email: users.owner.email, password: PASSWORD });
     expect(taken.status).toBe(409);
     expect(fields(taken.body.error)).toEqual(['code', 'fields', 'message']);
     expect(taken.body.error.fields.email).not.toContain('@');

@@ -29,7 +29,7 @@ The two paging bugs were fixed with step 7 on 22 Nov; the review queue now signs
 
 | # | Work | Why | Plan step |
 |---|------|-----|-----------|
-| M1 | Content policy page and report categories with a copyright option | NFR-L1 in the proposal; not built | 6 |
+| M1 | Content policy page and report categories with a copyright option | **Built 22 Nov**; its migration needs applying to the shared database | 6 |
 | M2 | Page limits on every admin list, and "Load more" on the screens | Bugs above; queues must stay usable as data grows | 7 |
 | M3 | Tests on every push (GitHub Actions) | NFR-M3; also shows evidence of testing at the defence | 10 |
 | M4 | Change password while signed in | **Done 22 Nov:** `POST /api/auth/me/password` and a form on the account page | New, below |

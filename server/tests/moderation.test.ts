@@ -195,7 +195,7 @@ describe('Message evidence (FR16)', () => {
     expect((await admin.agent.get(`/api/admin/reports/${projectReport.id}/conversation`)).status).toBe(404);
     expect(await prisma.auditLog.count({ where: { action: 'CONVERSATION_READ' } })).toBe(0);
 
-    const filed = await a.agent.post('/api/reports').send({ targetType: 'CONVERSATION', targetId: conversation.id, reason: 'He is threatening me in private messages.' });
+    const filed = await a.agent.post('/api/reports').send({ targetType: 'CONVERSATION', targetId: conversation.id, category: 'HARASSMENT', reason: 'He is threatening me in private messages.' });
     const url = `/api/admin/reports/${filed.body.id}/conversation`;
     const read = await admin.agent.get(url);
     expect(read.status).toBe(200);

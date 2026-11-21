@@ -61,6 +61,10 @@ export const MEMBER_STATUSES = ['INVITED', 'ACCEPTED', 'DECLINED'] as const;
 export const MILESTONE_STATUSES = ['PLANNED', 'IN_PROGRESS', 'DONE'] as const;
 export const REPORT_TARGETS = ['PROJECT', 'COMMENT', 'OFFER', 'USER', 'CONVERSATION'] as const;
 export const REPORT_STATUSES = ['OPEN', 'CONFIRMED', 'DISMISSED'] as const;
+/** What a report is about (NFR-L1); the Content policy page explains each one. */
+export const REPORT_CATEGORIES = ['SPAM', 'HARASSMENT', 'INAPPROPRIATE', 'COPYRIGHT', 'PRIVACY', 'MISLEADING', 'OTHER'] as const;
+/** Only content someone can own can infringe copyright, so accounts and conversations are left out. */
+export const COPYRIGHT_TARGETS: readonly string[] = ['PROJECT', 'COMMENT', 'OFFER'];
 export const OFFER_TYPES = ['FIXED', 'HOURLY', 'STIPEND', 'EQUITY'] as const;
 export const ROLE_REQUEST_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const;
 export const CONTACT_REQUEST_STATUSES = ['PENDING', 'ACCEPTED', 'DECLINED', 'WITHDRAWN'] as const;

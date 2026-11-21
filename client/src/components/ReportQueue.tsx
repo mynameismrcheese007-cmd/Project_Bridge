@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { api, ApiError, type AdminReport } from '../api';
+import { api, ApiError, REPORT_CATEGORY_LABELS, type AdminReport, type ReportCategory } from '../api';
 import { usePagedList } from '../lib/usePagedList';
 import { Alert } from './Alert';
+import { SelectField } from './FormControls';
 import { LoadMore } from './LoadMore';
 import { TextDialog } from './TextDialog';
 import { TabPanel, Tabs } from './ui/Tabs';
@@ -17,7 +18,8 @@ type Status = AdminReport['status'];
  */
 export function ReportQueue() {
   const [status, setStatus] = useState<Status>('OPEN');
-  const { items: loaded, hasMore, loadingMore, loadMore, reload, error, setError } = usePagedList<AdminReport>(`/admin/reports?status=${status}`);
+  const [category, setCategory] = useState<ReportCategory | ''>('');
+  const { items: loaded, hasMore, loadingMore, loadMore, reload, error, setError } = usePagedList<AdminReport>(`/admin/reports?status=${status}${category ? `&category=${category}` : ''}`);
   const items = loaded ?? [];
   const loading = loaded === null && !error;
   const [dismissing, setDismissing] = useState<{ report: AdminReport; action: 'dismiss' | 'confirm' | 'remove' } | null>(null);
@@ -71,10 +73,20 @@ export function ReportQueue() {
         ]}
       />
       <TabPanel name="reports" value={status} className="stack">
+      <div style={{ maxWidth: 280 }}>
+        <SelectField label="Category" value={category} onChange={(e) => setCategory(e.target.value as ReportCategory | '')}>
+          <option value="">All categories</option>
+          {(Object.keys(REPORT_CATEGORY_LABELS) as ReportCategory[]).map((c) => (
+            <option key={c} value={c}>
+              {REPORT_CATEGORY_LABELS[c]}
+            </option>
+          ))}
+        </SelectField>
+      </div>
 
       {error && <Alert tone="error">{error}</Alert>}
       {loading && <SkeletonList rows={2} label="Loading reports…" />}
-      {!loading && items.length === 0 && !error && <EmptyState title={`No ${status.toLowerCase()} reports`}>Reports filed by Uploaders and Professionals appear here for a decision.</EmptyState>}
+      {!loading && items.length === 0 && !error && <EmptyState title={`No ${status.toLowerCase()} ${category ? `${REPORT_CATEGORY_LABELS[category].toLowerCase()} ` : ''}reports`}>Reports filed by Uploaders and Professionals appear here for a decision.</EmptyState>}
 
       {!loading &&
         items.map((r) => (
@@ -82,6 +94,7 @@ export function ReportQueue() {
             <div className="row space-between">
               <div className="row">
                 <span className="badge badge-navy">{r.targetType}</span>
+                <span className={`badge ${r.category === 'COPYRIGHT' ? 'badge-amber' : ''}`}>{REPORT_CATEGORY_LABELS[r.category]}</span>
                 {r.targetType === 'PROJECT' ? (
                   <Link to={`/projects/${r.targetId}`}>Open the reported project</Link>
                 ) : (
@@ -93,6 +106,21 @@ export function ReportQueue() {
               </time>
             </div>
             <p className="comment-body">{r.reason ?? <span className="muted">The reason cannot be decrypted with the current key.</span>}</p>
+            {r.category === 'COPYRIGHT' && (
+              <p className="small">
+                {r.copyrightDeclaredAt && <>The reporter declared they own the work or act for its owner. </>}
+                {r.originalWorkUrl ? (
+                  <>
+                    Original:{' '}
+                    <a href={r.originalWorkUrl} target="_blank" rel="noreferrer noopener nofollow">
+                      {r.originalWorkUrl}
+                    </a>
+                  </>
+                ) : (
+                  <span className="muted">No link to the original was given.</span>
+                )}
+              </p>
+            )}
             <p className="small muted">Reported by {r.reporter.name}</p>
             {r.decisionNote && <p className="small">Decision note: {r.decisionNote}</p>}
             <div className="row">

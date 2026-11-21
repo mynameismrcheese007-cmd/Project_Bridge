@@ -97,7 +97,7 @@ export function tokenFromLastVerifyMail(): string {
 
 /** Signs up, then uses the emailed link on `agent`, which ends up signed in. Returns the link's response. */
 export async function registerAndVerify(details: { name: string; email: string; password: string }, agent = request.agent(app)) {
-  const res = await agent.post('/api/auth/register').send(details);
+  const res = await agent.post('/api/auth/register').send({ acceptPolicy: true, ...details });
   if (res.status !== 202) throw new Error(`Sign-up failed for ${details.email}: ${res.status} ${JSON.stringify(res.body)}`);
   return agent.post('/api/auth/verify-email').send({ token: tokenFromLastVerifyMail() });
 }

@@ -66,7 +66,7 @@ accountsRouter.post('/login', loginLimiter, validateBody(loginSchema), async (re
 });
 
 accountsRouter.post('/google', loginLimiter, validateBody(googleSchema), async (req, res) => {
-  const { token, user } = await accounts.loginWithGoogle(req.body.credential);
+  const { token, user } = await accounts.loginWithGoogle(req.body.credential, req.body.acceptPolicy === true);
   setSessionCookie(res, token);
   res.json({ user: toSignInView(user) });
 });

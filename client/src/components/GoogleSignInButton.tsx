@@ -50,11 +50,14 @@ function loadGoogleScript(): Promise<void> {
  * chooser that the browser shows in the corner. Both give us the same ID token, and the server
  * verifies it and opens the normal ProjectBridge session.
  */
-export function GoogleSignInButton({ text = 'signin_with' }: { text?: 'signin_with' | 'signup_with' }) {
+export function GoogleSignInButton({ text = 'signin_with', acceptPolicy = false }: { text?: 'signin_with' | 'signup_with'; acceptPolicy?: boolean }) {
   const { refresh } = useAuth();
   const navigate = useNavigate();
   const container = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
+  // Read when Google answers, so ticking the box after the button is drawn still counts.
+  const accepted = useRef(acceptPolicy);
+  accepted.current = acceptPolicy;
 
   useEffect(() => {
     if (!CLIENT_ID) return;
@@ -72,11 +75,13 @@ export function GoogleSignInButton({ text = 'signin_with' }: { text?: 'signin_wi
           callback: async ({ credential }) => {
             setError('');
             try {
-              await api('/auth/google', { body: { credential } });
+              // A new account needs the Content policy agreed on the sign-up page; existing ones sign in either way.
+              await api('/auth/google', { body: { credential, acceptPolicy: accepted.current } });
               await refresh();
               navigate('/account', { replace: true });
             } catch (err) {
-              setError(err instanceof ApiError ? err.message : 'Google sign-in failed.');
+              if (err instanceof ApiError && err.code === 'POLICY_REQUIRED' && text === 'signup_with') setError('Tick the Content policy box first, then continue with Google.');
+              else setError(err instanceof ApiError ? err.message : 'Google sign-in failed.');
             }
           },
         });

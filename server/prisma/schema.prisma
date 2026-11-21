@@ -15,21 +15,23 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  name            String
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String
   /// Null for accounts that only sign in with Google.
-  passwordHash    String?
-  googleId        String?   @unique
+  passwordHash     String?
+  googleId         String?   @unique
   /// UPLOADER | PROFESSIONAL | ADMIN. New accounts are always UPLOADER (FR01).
-  role            String    @default("UPLOADER")
+  role             String    @default("UPLOADER")
   /// ACTIVE | RESTRICTED | SUSPENDED | BANNED (FR16).
-  status          String    @default("ACTIVE")
+  status           String    @default("ACTIVE")
   /// When the address was proven: by the sign-up link, or by Google. Accounts made before
   /// verification existed were backfilled with their creation date.
-  emailVerifiedAt DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  emailVerifiedAt  DateTime?
+  /// When they agreed to the Content policy at sign-up (NFR-L1). Null for accounts made before it.
+  policyAcceptedAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   sessions         Session[]
   emailTokens      EmailToken[]
@@ -120,22 +122,29 @@ model Notification {
 
 /// An abuse or copyright report (FR13). A report alone changes nothing about its target.
 model Report {
-  id           String    @id @default(cuid())
-  reporterId   String
-  reporter     User      @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  id                  String    @id @default(cuid())
+  reporterId          String
+  reporter            User      @relation(fields: [reporterId], references: [id], onDelete: Cascade)
   /// PROJECT | COMMENT | OFFER | USER | CONVERSATION
-  targetType   String
-  targetId     String
+  targetType          String
+  targetId            String
+  /// SPAM | HARASSMENT | INAPPROPRIATE | COPYRIGHT | PRIVACY | MISLEADING | OTHER (NFR-L1).
+  category            String    @default("OTHER")
   /// Encrypted with lib/crypto.
-  reason       String
+  reason              String
+  /// Copyright reports only: where the original work can be seen, and when the reporter declared
+  /// they own it or act for the owner.
+  originalWorkUrl     String?
+  copyrightDeclaredAt DateTime?
   /// OPEN | CONFIRMED | DISMISSED
-  status       String    @default("OPEN")
-  decisionNote String?
-  reviewedById String?
-  reviewedAt   DateTime?
-  createdAt    DateTime  @default(now())
+  status              String    @default("OPEN")
+  decisionNote        String?
+  reviewedById        String?
+  reviewedAt          DateTime?
+  createdAt           DateTime  @default(now())
 
   @@index([status, createdAt])
+  @@index([status, category, createdAt])
   @@index([reporterId, targetType, targetId])
 }
 
@@ -278,13 +287,15 @@ model ProjectMedia {
 /// A sign-up waiting for its email link (FR01). No User exists until the link is used, so an address
 /// nobody has proven never becomes an account. Signing up again replaces the earlier pending one.
 model PendingRegistration {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  tokenHash    String   @unique
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String
+  passwordHash     String
+  /// When the Content policy box was ticked; copied to the account when the link is used.
+  policyAcceptedAt DateTime?
+  tokenHash        String    @unique
+  expiresAt        DateTime
+  createdAt        DateTime  @default(now())
 }
 
 /// Anonymous browsing session used to enforce the Guest card cap (FR05).

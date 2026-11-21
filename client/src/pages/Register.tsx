@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { api, ApiError } from '../api';
 import { Alert } from '../components/Alert';
 import { AuthLayout } from '../components/AuthLayout';
+import { CheckboxField } from '../components/FormControls';
 import { FormField, PasswordChecklist } from '../components/FormField';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { ResendVerification } from '../components/ResendVerification';
@@ -15,6 +16,7 @@ export function Register() {
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sentTo, setSentTo] = useState('');
+  const [acceptPolicy, setAcceptPolicy] = useState(false);
 
   const update = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -28,6 +30,7 @@ export function Register() {
       email: emailProblem(form.email),
       password: passwordProblem(form.password),
       confirm: form.password !== form.confirm ? 'Passwords do not match.' : undefined,
+      acceptPolicy: acceptPolicy ? undefined : 'Agree to the Content policy to create an account.',
     };
     const problems = Object.fromEntries(Object.entries(found).filter(([, v]) => v)) as Record<string, string>;
     if (Object.keys(problems).length) {
@@ -38,7 +41,7 @@ export function Register() {
     setSubmitting(true);
     try {
       // The account is created, and signed in, only when the emailed link is used (FR01).
-      await api('/auth/register', { body: { name: form.name, email: form.email, password: form.password } });
+      await api('/auth/register', { body: { name: form.name, email: form.email, password: form.password, acceptPolicy } });
       setSentTo(form.email.trim().toLowerCase());
     } catch (err) {
       if (err instanceof ApiError) {
@@ -80,7 +83,21 @@ export function Register() {
         </span>
       }
     >
-      <GoogleSignInButton text="signup_with" />
+      <CheckboxField
+        label={
+          <>
+            I agree to the{' '}
+            <Link to="/policy" target="_blank" rel="noreferrer">
+              Content policy
+            </Link>
+            . This also applies when signing up with Google.
+          </>
+        }
+        checked={acceptPolicy}
+        onChange={setAcceptPolicy}
+        error={errors.acceptPolicy}
+      />
+      <GoogleSignInButton text="signup_with" acceptPolicy={acceptPolicy} />
       {formError && <Alert tone="error">{formError}</Alert>}
       <form className="form" onSubmit={handleSubmit} noValidate>
         <FormField

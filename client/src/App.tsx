@@ -3,7 +3,9 @@ import { Route, Routes } from 'react-router';
 import { NavBar } from './components/NavBar';
 import { PageTransition } from './motion';
 import { RequireAuth } from './components/RequireAuth';
+import { SiteFooter } from './components/SiteFooter';
 import { SkeletonList } from './components/ui/Skeleton';
+import { ContentPolicy } from './pages/ContentPolicy';
 import { Explore } from './pages/Explore';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Login } from './pages/Login';
@@ -50,6 +52,7 @@ export function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/policy" element={<ContentPolicy />} />
           <Route
             path="/account"
             element={
@@ -142,6 +145,7 @@ export function App() {
         )}
         </PageTransition>
       </div>
+      <SiteFooter />
     </>
   );
 }
