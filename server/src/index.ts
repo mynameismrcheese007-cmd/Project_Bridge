@@ -1,6 +1,7 @@
 import { createApp } from './app.js';
 import { config } from './config.js';
 import { assertEncryptionConfigured } from './lib/crypto.js';
+import { keepConnectionsAlive } from './lib/prisma.js';
 
 // The HTTPS redirect, Secure cookies and the checks below all depend on this, so a server missing it
 // must not start and look healthy without them. .env loads when config.js is imported above.
@@ -27,4 +28,5 @@ createApp().listen(config.port, (error?: Error) => {
     process.exit(1);
   }
   console.log(`ProjectBridge API listening on http://localhost:${config.port}`);
+  keepConnectionsAlive();
 });
