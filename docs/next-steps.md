@@ -9,7 +9,7 @@ Owners follow the team roles: Shezad (backend), Riyad (frontend), Rakibul (test/
 | Area | State on 21 Nov |
 |------|-----------------|
 | Profile cover fix | Redone on Shezad's machine (`Account.tsx`, `styles.css`): empty cover is a drafting grid labelled "No cover photo", button readable in both themes. Not committed yet. The MacBook's `fix/profile-cover` branch was never pushed; drop it. |
-| Email verification (FR01) | Built on branch `fix/db-stall`, waiting for its migration on the shared database. Sign-up saves a pending registration and emails a one-time link valid 24 hours; the account and its first sign-in exist only once the link is used. Later sign-ins need no email. Existing accounts are marked verified by the migration. |
+| Email verification (FR01) | Built on branch `fix/db-stall`; its migration was applied to the shared database on 21 Nov (11 existing accounts marked verified). Sign-up saves a pending registration and emails a one-time link valid 24 hours; the account and its first sign-in exist only once the link is used. Later sign-ins need no email. Existing accounts are marked verified by the migration. |
 | Content policy, copyright reports (NFR-L1) | Missing. No policy page, and reports have no copyright option. |
 | Database stall | Fixed on branch `fix/db-stall` (first request after 15 idle minutes: 2.4 s, was 91 s; all 1138 tests pass): `socket_timeout` 15 → 6 s, `pool_timeout` 40 → 15 s, transaction `maxWait` 40 → 15 s, and a `SELECT 1` per pooled connection every 3 minutes. Worst case for a read drops from about 85 s to 33 s, and the ping should stop the stall happening at all. |
 | Session cleanup | Done on branch `fix/db-stall`: `server/src/lib/cleanup.ts` runs at start-up and hourly, deleting expired sign-ins, expired email links and guest sessions older than the 30-day guest cookie. Guest sessions were already created only by the feed, search and project view, which need them to count cards, so that part needed no change. |
@@ -29,7 +29,7 @@ Owners follow the team roles: Shezad (backend), Riyad (frontend), Rakibul (test/
 | 4 | Email verification at sign-up (FR01) | Shezad + Riyad | No account until the emailed link is used; signing in before that is refused with "Send a new link"; signing up again or resending replaces the old link; Google proves the address too; tests for expired, reused, replaced and made-up links; migration `20261121120000_email_verification` applied with the team's OK |
 | 5 | Gate rehearsal for F01–F07 and F13 | Rakibul | Each acceptance test (AT) for those features run by hand on a fresh database copy, with result and screenshot recorded in `docs/acceptance/` |
 
-Step 4's migration adds `User.emailVerifiedAt` (backfilled for every existing account) and the `PendingRegistration` table. The team agreed on 21 Nov that existing, demo and test accounts count as verified. **The code needs the migration applied before anyone runs it against the shared database**: sign-up, Google sign-up and signing in with an unknown email all read the new table.
+Step 4's migration adds `User.emailVerifiedAt` (backfilled for every existing account) and the `PendingRegistration` table. The team agreed on 21 Nov that existing, demo and test accounts count as verified. The migration is applied (21 Nov). Older code still runs against it, but `master` signs people up without confirmation until this branch is merged, so merge it soon.
 
 ## Plan to 27 Dec: finish features and harden
 
