@@ -27,6 +27,7 @@ export const config = {
   bcryptRounds: int('BCRYPT_ROUNDS', 12),
   sessionTtlMs: 7 * 24 * 60 * 60 * 1000,
   resetTokenTtlMs: 60 * 60 * 1000,
+  verifyTokenTtlMs: 24 * 60 * 60 * 1000,
   loginMaxAttempts: int('LOGIN_MAX_ATTEMPTS', 5),
   authRateLimit: int('AUTH_RATE_LIMIT', 20),
   inviteRateLimit: int('INVITE_RATE_LIMIT', 20),

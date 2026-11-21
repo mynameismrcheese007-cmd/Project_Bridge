@@ -12,6 +12,8 @@ Gates: **Public** needs no sign-in. **requireAuth** needs any signed-in account 
 |---|---|---|---|---|
 | GET | `/api/auth/config` | Public | None: public | accounts, hardening |
 | POST | `/api/auth/register` | Public | None: public, rate limited | accounts, hardening |
+| POST | `/api/auth/verify-email` | Public | None: public, rate limited | accounts, hardening |
+| POST | `/api/auth/resend-verification` | Public | None: public, rate limited | accounts, hardening |
 | POST | `/api/auth/login` | Public | None: public, rate limited | accounts, hardening |
 | POST | `/api/auth/google` | Public | None: public, rate limited | accounts, hardening |
 | POST | `/api/auth/logout` | Public | None: public | accounts, hardening |
@@ -150,7 +152,7 @@ Gates: **Public** needs no sign-in. **requireAuth** needs any signed-in account 
 |---|---|---|---|---|
 | GET | `/p/:id` | Public | Published only; Guest card fields, HTML-escaped | sharing |
 
-89 routes in all.
+91 routes in all.
 
 ## Checked and left as they are
 

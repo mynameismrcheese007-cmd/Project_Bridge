@@ -31,6 +31,7 @@ Demo accounts (password `Password123!`): `admin@projectbridge.test` (Sourav, Adm
 - Build responses from explicit field lists. Never return a whole database row. Never return emails, password hashes, tokens or storage paths. What each role sees of a project is `FIELDS_BY_TIER` in `server/src/modules/discovery/visibility.ts`; Admins get the Professional view.
 - Validate input with zod through `validateBody`; throw `HttpError` for failures.
 - Status values are strings, listed in `server/src/domain.ts`.
+- Sign-up (FR01) creates no account: it stores a `PendingRegistration` and mails a one-time link (24 hours). `POST /api/auth/verify-email` creates the Uploader and signs them in. Every `User` row has a proven address, by link, Google or the 21 Nov backfill. In tests, use `registerAndVerify()` from `tests/helpers.ts` to make an account through the real flow.
 - Multi-step changes that must stay consistent go in one `prisma.$transaction(async (tx) => …, TX_OPTIONS)`. Inside it use only `tx`, never the global `prisma`. Pass `tx` to `audit()` and `notify()`. Admin decisions write an audit row with `oldValue` and `newValue` and notify the affected user in that same transaction. Use a conditional `updateMany` (for example `where: { id, status: 'PENDING' }`) so a decision cannot happen twice.
 - Private free text goes through `encrypt(text, '<Model>.<column>')` and `decrypt` from `server/src/lib/crypto.ts`.
 - Add tests for the denied cases, not only the allowed ones.

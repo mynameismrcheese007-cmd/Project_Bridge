@@ -4,6 +4,7 @@
  */
 import bcrypt from 'bcryptjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setMailer } from '../src/lib/mailer.js';
 import {
   app,
   createUser,
@@ -13,36 +14,57 @@ import {
   prisma,
   request,
   resetDb,
+  registerAndVerify,
   signedInAgent,
   tokenFromLastResetMail,
+  tokenFromLastVerifyMail,
 } from './helpers.js';
 
 beforeEach(resetDb);
 
+/** An account as made before sign-up links existed: never proved its address. */
+async function legacyAccount(email: string, password: string) {
+  return prisma.user.create({ data: { name: 'Attacker', email, passwordHash: await bcrypt.hash(password, 4) } });
+}
+
 describe('AT01.1 Registration', () => {
-  it('creates an UPLOADER and signs them in immediately', async () => {
+  it('creates nothing and signs nobody in until the emailed link is used', async () => {
     const agent = request.agent(app);
     const res = await agent
       .post('/api/auth/register')
       .send({ name: 'Riyad', email: 'Riyad@Example.com ', password: PASSWORD });
 
+    expect(res.status).toBe(202);
+    expect(res.headers['set-cookie']).toBeUndefined();
+    expect(JSON.stringify(res.body)).not.toContain('@');
+    expect((await agent.get('/api/auth/me')).status).toBe(401);
+    expect(await prisma.user.count()).toBe(0);
+    expect(mailer.outbox).toHaveLength(1);
+    expect(mailer.outbox[0].to).toBe('riyad@example.com');
+    expect(mailer.outbox[0].text).toContain('/verify-email?token=');
+  });
+
+  it('creates the UPLOADER when the link is used and signs them in on that browser', async () => {
+    const agent = request.agent(app);
+    const res = await registerAndVerify({ name: 'Riyad', email: 'Riyad@Example.com ', password: PASSWORD }, agent);
+
     expect(res.status).toBe(201);
-    expect(res.body.user).toMatchObject({ role: 'UPLOADER', hasPassword: true });
+    expect(res.body.user).toMatchObject({ role: 'UPLOADER', status: 'ACTIVE', hasPassword: true, googleLinked: false });
     expect(res.body.user.email).toBeUndefined();
     expect(String(res.headers['set-cookie'])).toContain('pb_session=');
     const me = await agent.get('/api/auth/me');
     expect(me.status).toBe(200);
     expect(me.body.user.email).toBe('riyad@example.com');
-    expect(mailer.outbox).toHaveLength(0);
 
     const stored = await prisma.user.findUniqueOrThrow({ where: { email: 'riyad@example.com' } });
     expect(stored.passwordHash).not.toContain(PASSWORD);
+    expect(stored.emailVerifiedAt).toBeInstanceOf(Date);
+    expect(await prisma.pendingRegistration.count()).toBe(0);
+    expect(await prisma.auditLog.count({ where: { action: 'USER_REGISTERED', targetId: stored.id } })).toBe(1);
   });
 
   it('ignores a self-assigned role: no one can register as ADMIN or PROFESSIONAL', async () => {
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({ name: 'Mallory', email: 'mallory@example.com', password: PASSWORD, role: 'ADMIN', status: 'ACTIVE' });
+    const res = await registerAndVerify({ name: 'Mallory', email: 'mallory@example.com', password: PASSWORD, role: 'ADMIN', status: 'ACTIVE' } as never);
 
     expect(res.status).toBe(201);
     expect(res.body.user.role).toBe('UPLOADER');
@@ -72,7 +94,7 @@ describe('AT01.1 Registration', () => {
 
   it.each(['Md. Rakibul Hasan', "O'Brien-Smith", 'মোঃ রাকিবুল হাসান'])('accepts the name %s', async (name) => {
     const res = await request(app).post('/api/auth/register').send({ name, email: 'name-ok@example.com', password: PASSWORD });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(202);
   });
 
   it.each(['plain', 'a@b', 'a@b.c', 'a..b@example.com', 'a@exa_mple.com', '.a@example.com'])('refuses the email %s', async (email) => {
@@ -111,6 +133,134 @@ describe('AT01.1 Registration', () => {
 
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('EMAIL_TAKEN');
+  });
+});
+
+describe('AT01.1 Email confirmation at sign-up', () => {
+  const details = { name: 'Riyad', email: 'confirm@example.com', password: PASSWORD };
+  const signUp = (body: Record<string, string> = details) => request(app).post('/api/auth/register').send(body);
+  const useLink = (token: string, agent = request.agent(app)) => agent.post('/api/auth/verify-email').send({ token });
+
+  it('confirms once: the same link cannot create a second account or session', async () => {
+    await signUp();
+    const token = tokenFromLastVerifyMail();
+    expect((await useLink(token)).status).toBe(201);
+
+    const again = await useLink(token);
+    expect(again.status).toBe(400);
+    expect(again.body.error.code).toBe('INVALID_TOKEN');
+    expect(again.headers['set-cookie']).toBeUndefined();
+    expect(await prisma.user.count()).toBe(1);
+    expect(await prisma.session.count()).toBe(1);
+  });
+
+  it('refuses an expired link and a made-up one, and creates nothing', async () => {
+    await signUp();
+    const token = tokenFromLastVerifyMail();
+    await prisma.pendingRegistration.updateMany({ data: { expiresAt: new Date(Date.now() - 1000) } });
+
+    for (const attempt of [token, 'not-a-real-token-at-all']) {
+      const res = await useLink(attempt);
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_TOKEN');
+    }
+    expect(await prisma.user.count()).toBe(0);
+  });
+
+  it('keeps the link valid for 24 hours', async () => {
+    await signUp();
+    const { expiresAt, createdAt } = await prisma.pendingRegistration.findUniqueOrThrow({ where: { email: details.email } });
+    expect(expiresAt.getTime() - createdAt.getTime()).toBeGreaterThan(23.9 * 60 * 60 * 1000);
+    expect(expiresAt.getTime() - createdAt.getTime()).toBeLessThanOrEqual(24 * 60 * 60 * 1000 + 5000);
+  });
+
+  it('signing up again replaces the earlier link, name and password', async () => {
+    await signUp();
+    const first = tokenFromLastVerifyMail();
+    await signUp({ ...details, name: 'Riyad Hossain', password: 'SecondPass7!' });
+    const second = tokenFromLastVerifyMail();
+
+    expect((await useLink(first)).status).toBe(400);
+    expect((await useLink(second)).status).toBe(201);
+    expect(await prisma.user.findUniqueOrThrow({ where: { email: details.email } })).toMatchObject({ name: 'Riyad Hossain' });
+    expect((await request(app).post('/api/auth/login').send({ email: details.email, password: 'SecondPass7!' })).status).toBe(200);
+    expect((await request(app).post('/api/auth/login').send({ email: details.email, password: PASSWORD })).status).toBe(401);
+  });
+
+  it('refuses sign-in before confirming; only the right password learns why', async () => {
+    await signUp();
+
+    const right = await request(app).post('/api/auth/login').send({ email: details.email, password: PASSWORD });
+    expect(right.status).toBe(403);
+    expect(right.body.error.code).toBe('EMAIL_UNVERIFIED');
+    expect(right.headers['set-cookie']).toBeUndefined();
+
+    const wrong = await request(app).post('/api/auth/login').send({ email: details.email, password: 'WrongPass7!' });
+    const unknown = await request(app).post('/api/auth/login').send({ email: 'nobody@example.com', password: 'WrongPass7!' });
+    expect(wrong.status).toBe(401);
+    expect(wrong.body.error).toEqual(unknown.body.error);
+    expect(await prisma.session.count()).toBe(0);
+  });
+
+  it('asks for confirmation only once: later sign-ins send no email', async () => {
+    const agent = request.agent(app);
+    await registerAndVerify(details, agent);
+    await agent.post('/api/auth/logout');
+    const mailsBefore = mailer.outbox.length;
+
+    for (let i = 0; i < 2; i++) {
+      expect((await request(app).post('/api/auth/login').send({ email: details.email, password: PASSWORD })).status).toBe(200);
+    }
+    expect(mailer.outbox).toHaveLength(mailsBefore);
+  });
+
+  it('resends a fresh link that replaces the old one, and says the same for an unknown address', async () => {
+    await signUp();
+    const first = tokenFromLastVerifyMail();
+
+    const resent = await request(app).post('/api/auth/resend-verification').send({ email: details.email });
+    const unknown = await request(app).post('/api/auth/resend-verification').send({ email: 'nobody@example.com' });
+    expect(resent.status).toBe(200);
+    expect(unknown.body).toEqual(resent.body);
+    expect(mailer.outbox).toHaveLength(2);
+
+    expect((await useLink(first)).status).toBe(400);
+    expect((await useLink(tokenFromLastVerifyMail())).status).toBe(201);
+  });
+
+  it('says so when the email cannot be sent, and a resend works once mail is back', async () => {
+    setMailer({ send: async () => ({ sent: false }) });
+    try {
+      const res = await signUp();
+      expect(res.status).toBe(502);
+      expect(res.body.error.code).toBe('MAIL_FAILED');
+    } finally {
+      setMailer(mailer);
+    }
+    expect(await prisma.user.count()).toBe(0);
+    expect((await request(app).post('/api/auth/resend-verification').send({ email: details.email })).status).toBe(200);
+    expect((await useLink(tokenFromLastVerifyMail())).status).toBe(201);
+  });
+
+  it('sends no link for an address that already has an account', async () => {
+    await createUser({ email: details.email });
+    expect((await signUp()).status).toBe(409);
+    expect((await request(app).post('/api/auth/resend-verification').send({ email: details.email })).status).toBe(200);
+    expect(mailer.outbox).toHaveLength(0);
+  });
+
+  it('lets Google prove the address instead, and the waiting link then stops working', async () => {
+    await signUp();
+    const token = tokenFromLastVerifyMail();
+    googleAccounts.set('confirm', { sub: 'google-confirm', email: details.email, emailVerified: true, name: 'Riyad' });
+
+    const google = await request(app).post('/api/auth/google').send({ credential: 'google:confirm'.padEnd(30, 'x') });
+    expect(google.status).toBe(200);
+    expect(await prisma.pendingRegistration.count()).toBe(0);
+    expect((await prisma.user.findUniqueOrThrow({ where: { email: details.email } })).emailVerifiedAt).toBeInstanceOf(Date);
+
+    expect((await useLink(token)).status).toBe(400);
+    expect(await prisma.user.count()).toBe(1);
   });
 });
 
@@ -247,12 +397,12 @@ describe('AT01.3 Google linking shuts out whoever registered the address first',
   const owner = { sub: 'google-owner', email: 'victim@gmail.com', emailVerified: true, name: 'Real Owner' };
   const ATTACKER_PASSWORD = 'AttackerPass1!';
 
+  // Sign-up now proves the address first, so only an account made before that can be held by
+  // someone who does not own the address. These tests start from such an account.
   async function registerAsAttacker() {
-    const attacker = request.agent(app);
-    const res = await attacker.post('/api/auth/register').send({ name: 'Attacker', email: owner.email, password: ATTACKER_PASSWORD });
-    expect(res.status).toBe(201);
-    expect((await attacker.get('/api/auth/me')).status).toBe(200);
-    return { attacker, id: res.body.user.id as string };
+    const { id } = await legacyAccount(owner.email, ATTACKER_PASSWORD);
+    const attacker = await signedInAgent(owner.email, ATTACKER_PASSWORD);
+    return { attacker, id };
   }
 
   async function signInWithGoogle() {
@@ -360,10 +510,11 @@ describe('AT01.3 Sign-ins and resets overtaken by a linking or password change',
   const LOCK_HOLD_OPTIONS = { maxWait: 10_000, timeout: 28_000 };
 
   async function registerAsAttacker(email: string) {
-    const agent = request.agent(app);
-    const res = await agent.post('/api/auth/register').send({ name: 'Attacker', email, password: ATTACKER_PASSWORD });
-    expect(res.status).toBe(201);
-    return { agent, id: res.body.user.id as string };
+    const { id } = await legacyAccount(email, ATTACKER_PASSWORD);
+    const agent = await signedInAgent(email, ATTACKER_PASSWORD);
+    // The tests below count only the sign-ins they make themselves.
+    await prisma.auditLog.deleteMany({ where: { targetId: id } });
+    return { agent, id };
   }
 
   async function ownerSignsIn(email: string) {
@@ -559,10 +710,12 @@ describe('AT01.3 Sign-ins and resets overtaken by a linking or password change',
     expect(await prisma.session.count({ where: { userId: id } })).toBe(1);
   });
 
-  it('removes a registrant’s session when the linking commits right after the registration', async () => {
+  it('removes a registrant’s session when the linking commits right after the sign-up link is used', async () => {
     const email = 'race-register-link@gmail.com';
     let owner = request.agent(app);
     const registrant = request.agent(app);
+    expect((await registrant.post('/api/auth/register').send({ name: 'Attacker', email, password: ATTACKER_PASSWORD })).status).toBe(202);
+    const token = tokenFromLastVerifyMail();
     const writeAudit = prisma.auditLog.create.bind(prisma.auditLog);
     // USER_REGISTERED is written straight after the account becomes visible to a linking.
     const auditCreate = vi.spyOn(prisma.auditLog, 'create').mockImplementationOnce((async (args: never) => {
@@ -571,7 +724,7 @@ describe('AT01.3 Sign-ins and resets overtaken by a linking or password change',
     }) as never);
 
     try {
-      const res = await registrant.post('/api/auth/register').send({ name: 'Attacker', email, password: ATTACKER_PASSWORD });
+      const res = await registrant.post('/api/auth/verify-email').send({ token });
       expect(res.status).toBe(201);
       expect(auditCreate).toHaveBeenCalled();
       expect((await registrant.get('/api/auth/me')).status).toBe(401);
@@ -636,7 +789,7 @@ describe('AT01.3 Sign-ins and resets overtaken by a linking or password change',
     try {
       const email = 'one-connection@gmail.com';
       const account = { email, password: ATTACKER_PASSWORD };
-      const registered = await single.request(single.app).post('/api/auth/register').send({ name: 'Someone', ...account });
+      const registered = await single.registerAndVerify({ name: 'Someone', ...account });
       expect(registered.status).toBe(201);
 
       const [login, otherQuery] = await Promise.all([

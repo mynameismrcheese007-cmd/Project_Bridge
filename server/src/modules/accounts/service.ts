@@ -53,30 +53,89 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-/** Registers an Uploader and signs them in straight away. */
-export async function register(input: { name: string; email: string; password: string }) {
-  const existing = await prisma.user.findUnique({ where: { email: input.email } });
-  if (existing) {
-    throw new HttpError(409, 'EMAIL_TAKEN', 'An account with this email already exists.', {
-      email: 'An account with this email already exists. Try signing in or resetting your password.',
-    });
-  }
+function emailTaken(): HttpError {
+  return new HttpError(409, 'EMAIL_TAKEN', 'An account with this email already exists.', {
+    email: 'An account with this email already exists. Try signing in or resetting your password.',
+  });
+}
+
+function invalidVerifyLink(): HttpError {
+  return new HttpError(400, 'INVALID_TOKEN', 'This verification link is invalid or has expired. Sign up again or ask for a new link.');
+}
+
+/** Mails a new one-time link for a pending sign-up; the address must be proven before an account exists. */
+async function sendVerifyLink(email: string, name: string, token: string): Promise<boolean> {
+  const link = `${config.appUrl}/verify-email?token=${token}`;
+  const { sent } = await getMailer().send({
+    to: email,
+    subject: 'Confirm your email for ProjectBridge',
+    text: `Hi ${name},\n\nConfirm your email to finish creating your ProjectBridge account:\n${link}\n\nThis link expires in 24 hours. If you did not sign up, ignore this email and no account will be created.`,
+    html: `<p>Hi ${escapeHtml(name)},</p><p>Confirm your email to finish creating your ProjectBridge account:</p><p><a href="${link}">Confirm my email</a></p><p>This link expires in 24 hours. If you did not sign up, ignore this email and no account will be created.</p>`,
+  });
+  return sent;
+}
+
+/**
+ * FR01: starts a sign-up. No account exists until the emailed link is used, so nobody can hold an
+ * address they cannot read. Signing up again with the same address replaces the earlier pending
+ * sign-up and its link.
+ */
+export async function register(input: { name: string; email: string; password: string }): Promise<void> {
+  if (await prisma.user.findUnique({ where: { email: input.email } })) throw emailTaken();
   const passwordHash = await bcrypt.hash(input.password, config.bcryptRounds);
-  // Committed together, so a Google link that can see this account also removes its session.
+  const token = randomToken();
+  const pending = { name: input.name, passwordHash, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + config.verifyTokenTtlMs) };
+  await prisma.pendingRegistration.upsert({ where: { email: input.email }, create: { email: input.email, ...pending }, update: pending });
+  // The pending sign-up stays, so "Send a new link" can try again once mail works.
+  if (!(await sendVerifyLink(input.email, input.name, token))) {
+    throw new HttpError(502, 'MAIL_FAILED', 'We could not send the confirmation email. Please try again in a few minutes.');
+  }
+}
+
+/** Mails a fresh link for a pending sign-up. Always succeeds from the caller's view, so it cannot probe for addresses. */
+export async function resendVerification(email: string): Promise<void> {
+  const pending = await prisma.pendingRegistration.findUnique({ where: { email } });
+  if (!pending) return;
+  const token = randomToken();
+  await prisma.pendingRegistration.update({
+    where: { id: pending.id },
+    data: { tokenHash: hashToken(token), expiresAt: new Date(Date.now() + config.verifyTokenTtlMs) },
+  });
+  await sendVerifyLink(email, pending.name, token);
+}
+
+/** Uses a sign-up link: creates the Uploader with the details from sign-up and signs them in. */
+export async function verifyEmail(token: string) {
+  const pending = await prisma.pendingRegistration.findUnique({ where: { tokenHash: hashToken(token) } });
+  if (!pending || pending.expiresAt <= new Date()) throw invalidVerifyLink();
   const session = await prisma.$transaction(async (tx) => {
+    // Conditional, so two clicks on one link cannot both create the account.
+    const now = new Date();
+    const { count } = await tx.pendingRegistration.deleteMany({ where: { id: pending.id, tokenHash: pending.tokenHash, expiresAt: { gt: now } } });
+    if (count === 0) throw invalidVerifyLink();
+    // Google sign-in may have created the account for this address in the meantime.
+    if (await tx.user.findUnique({ where: { email: pending.email } })) throw emailTaken();
     const user = await tx.user.create({
-      data: { name: input.name, email: input.email, passwordHash, role: 'UPLOADER', status: 'ACTIVE' },
+      data: { name: pending.name, email: pending.email, passwordHash: pending.passwordHash, role: 'UPLOADER', status: 'ACTIVE', emailVerifiedAt: now },
     });
+    // Committed together, so a Google link that can see this account also removes its session.
     return createSession(user, tx);
   }, TX_OPTIONS);
   await audit('USER_REGISTERED', session.user.id);
   return session;
 }
 
+function emailUnverified(): HttpError {
+  return new HttpError(403, 'EMAIL_UNVERIFIED', 'Please confirm your email first. Use the link we sent you, or ask for a new one.');
+}
+
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email } });
+  const pending = user ? null : await prisma.pendingRegistration.findUnique({ where: { email } });
   // Google-only accounts have no password, so they fail here exactly like a wrong password.
-  const passwordOk = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH);
+  const passwordOk = await bcrypt.compare(password, user?.passwordHash ?? pending?.passwordHash ?? DUMMY_HASH);
+  // Only the person who chose the password learns that the sign-up is waiting for its link.
+  if (pending && passwordOk) throw emailUnverified();
   if (!user?.passwordHash || !passwordOk) {
     await audit('LOGIN_FAILED', user?.id ?? null, null, user ? 'wrong password' : 'unknown email');
     throw invalidCredentials();
@@ -102,15 +161,17 @@ export async function login(email: string, password: string) {
 }
 
 /**
- * Links Google to an account found by email. Registration does not verify the address, so whoever
- * registered it may not be its owner: their password, sessions and unused reset links all go. The
- * Google user can get a password back through forgot-password, which mails that address. The user
- * row comes first, as in every transaction here, so a registration, password sign-in or reset in
- * flight either commits first and is cleared here, or runs afterwards and finds its password or link gone.
+ * Links Google to an account found by email. Accounts made before sign-up links existed never proved
+ * their address, so whoever registered it may not be its owner: their password, sessions and unused
+ * reset links all go. The Google user can get a password back through forgot-password, which mails
+ * that address. The user row comes first, as in every transaction here, so a sign-up, password
+ * sign-in or reset in flight either commits first and is cleared here, or runs afterwards and finds
+ * its password or link gone.
  */
-async function linkGoogle(userId: string, googleId: string): Promise<User> {
+async function linkGoogle(existing: User, googleId: string): Promise<User> {
+  const userId = existing.id;
   const [user] = await prisma.$transaction([
-    prisma.user.update({ where: { id: userId }, data: { googleId, passwordHash: null } }),
+    prisma.user.update({ where: { id: userId }, data: { googleId, passwordHash: null, emailVerifiedAt: existing.emailVerifiedAt ?? new Date() } }),
     prisma.session.deleteMany({ where: { userId } }),
     prisma.emailToken.deleteMany({ where: { userId, type: 'RESET', usedAt: null } }),
   ]);
@@ -141,12 +202,16 @@ export async function loginWithGoogle(credential: string) {
     if (byEmail) {
       // Before any write, so a blocked account stays exactly as it was.
       await refuseIfBlocked(byEmail);
-      user = await linkGoogle(byEmail.id, identity.sub);
+      user = await linkGoogle(byEmail, identity.sub);
       action = 'GOOGLE_LINKED';
     } else {
-      user = await prisma.user.create({
-        data: { name: identity.name.slice(0, 80), email: identity.email, googleId: identity.sub, role: 'UPLOADER' },
-      });
+      // Google has proven the address, so any sign-up still waiting for its link is dropped.
+      [, user] = await prisma.$transaction([
+        prisma.pendingRegistration.deleteMany({ where: { email: identity.email } }),
+        prisma.user.create({
+          data: { name: identity.name.slice(0, 80), email: identity.email, googleId: identity.sub, role: 'UPLOADER', emailVerifiedAt: new Date() },
+        }),
+      ]);
       action = 'USER_REGISTERED_GOOGLE';
     }
   }
@@ -206,7 +271,8 @@ export async function resetPassword(token: string, password: string): Promise<vo
   const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
   await prisma.$transaction(async (tx) => {
     // The user row goes first, as in linkGoogle, so the two cannot deadlock.
-    await tx.user.update({ where: { id: record.userId }, data: { passwordHash } });
+    // Using the emailed link also proves the address.
+    await tx.user.update({ where: { id: record.userId }, data: { passwordHash, emailVerifiedAt: record.user.emailVerifiedAt ?? new Date() } });
     // Conditional update so two simultaneous requests cannot both use the same token. No match also
     // covers a link cancelled while hashing above, and throwing rolls the new password back.
     const now = new Date();

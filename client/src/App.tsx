@@ -10,6 +10,7 @@ import { Login } from './pages/Login';
 import { NotFound } from './pages/NotFound';
 import { Register } from './pages/Register';
 import { ResetPassword } from './pages/ResetPassword';
+import { VerifyEmail } from './pages/VerifyEmail';
 
 // Pages most visitors never open are loaded when first visited, keeping the first load small.
 const Account = lazy(() => import('./pages/Account').then((m) => ({ default: m.Account })));
@@ -48,6 +49,7 @@ export function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route
             path="/account"
             element={

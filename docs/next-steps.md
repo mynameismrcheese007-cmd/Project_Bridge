@@ -9,7 +9,7 @@ Owners follow the team roles: Shezad (backend), Riyad (frontend), Rakibul (test/
 | Area | State on 21 Nov |
 |------|-----------------|
 | Profile cover fix | Redone on Shezad's machine (`Account.tsx`, `styles.css`): empty cover is a drafting grid labelled "No cover photo", button readable in both themes. Not committed yet. The MacBook's `fix/profile-cover` branch was never pushed; drop it. |
-| Email verification (FR01) | Missing for password sign-up. Only Google sign-in checks `emailVerified`. `server/src/lib/mailer.ts` already sends the password reset mail and can be reused. |
+| Email verification (FR01) | Built on branch `fix/db-stall`, waiting for its migration on the shared database. Sign-up saves a pending registration and emails a one-time link valid 24 hours; the account and its first sign-in exist only once the link is used. Later sign-ins need no email. Existing accounts are marked verified by the migration. |
 | Content policy, copyright reports (NFR-L1) | Missing. No policy page, and reports have no copyright option. |
 | Database stall | Fixed on branch `fix/db-stall` (first request after 15 idle minutes: 2.4 s, was 91 s; all 1138 tests pass): `socket_timeout` 15 → 6 s, `pool_timeout` 40 → 15 s, transaction `maxWait` 40 → 15 s, and a `SELECT 1` per pooled connection every 3 minutes. Worst case for a read drops from about 85 s to 33 s, and the ping should stop the stall happening at all. |
 | Session cleanup | Done on branch `fix/db-stall`: `server/src/lib/cleanup.ts` runs at start-up and hourly, deleting expired sign-ins, expired email links and guest sessions older than the 30-day guest cookie. Guest sessions were already created only by the feed, search and project view, which need them to count cards, so that part needed no change. |
@@ -26,10 +26,10 @@ Owners follow the team roles: Shezad (backend), Riyad (frontend), Rakibul (test/
 | 1 | Commit and merge the cover fix | Riyad | Empty and photo covers readable in light and dark, on master |
 | 2 | Fix the 90-second stall | Shezad | Shorter socket and pool timeouts; a `SELECT 1` per pooled connection every 3 minutes keeps connections alive; `tests/prisma.test.ts` covers the settings; the first request after 15 idle minutes answers in under 5 s |
 | 3 | Session cleanup | Shezad | Hourly job deletes expired sessions, expired email links and guest sessions whose cookie has expired (deleting them sooner would hand a guest a fresh 20-card budget); `tests/cleanup.test.ts` covers it |
-| 4 | Email verification at sign-up (FR01) | Shezad + Riyad | New password accounts get a one-time link (reuse `tokens.ts` and `mailer.ts`); unverified accounts can sign in and read but not publish, comment or message; "Resend link" on the account page; tests for expired, reused and wrong tokens; Google accounts count as verified |
+| 4 | Email verification at sign-up (FR01) | Shezad + Riyad | No account until the emailed link is used; signing in before that is refused with "Send a new link"; signing up again or resending replaces the old link; Google proves the address too; tests for expired, reused, replaced and made-up links; migration `20261121120000_email_verification` applied with the team's OK |
 | 5 | Gate rehearsal for F01–F07 and F13 | Rakibul | Each acceptance test (AT) for those features run by hand on a fresh database copy, with result and screenshot recorded in `docs/acceptance/` |
 
-Step 4 needs a migration (a verified date on User, and a token table). Ask Sourav before touching the shared database.
+Step 4's migration adds `User.emailVerifiedAt` (backfilled for every existing account) and the `PendingRegistration` table. The team agreed on 21 Nov that existing, demo and test accounts count as verified. **The code needs the migration applied before anyone runs it against the shared database**: sign-up, Google sign-up and signing in with an unknown email all read the new table.
 
 ## Plan to 27 Dec: finish features and harden
 

@@ -1,6 +1,6 @@
 /**
- * Old sign-ins, guest sessions and email links are deleted on a schedule, without signing anyone out
- * early or giving a guest a fresh card budget.
+ * Old sign-ins, guest sessions, email links and unconfirmed sign-ups are deleted on a schedule,
+ * without signing anyone out early or giving a guest a fresh card budget.
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { config } from '../src/config.js';
@@ -70,7 +70,17 @@ describe('Session cleanup', () => {
     expect(await prisma.emailToken.count({ where: { userId: user.id } })).toBe(1);
   });
 
+  it('deletes sign-ups whose link expired unused, and keeps ones still waiting', async () => {
+    const pending = (email: string, expiresAt: Date) => ({ email, name: 'Someone', passwordHash: 'x', tokenHash: hashToken(randomToken()), expiresAt });
+    await prisma.pendingRegistration.createMany({ data: [pending('old@example.com', ago(HOUR)), pending('new@example.com', fromNow(HOUR))] });
+
+    const result = await deleteStaleSessions();
+
+    expect(result.pendingRegistrations).toBe(1);
+    expect((await prisma.pendingRegistration.findMany()).map((p) => p.email)).toEqual(['new@example.com']);
+  });
+
   it('does nothing when there is nothing stale', async () => {
-    expect(await deleteStaleSessions()).toEqual({ sessions: 0, guestSessions: 0, emailTokens: 0 });
+    expect(await deleteStaleSessions()).toEqual({ sessions: 0, guestSessions: 0, emailTokens: 0, pendingRegistrations: 0 });
   });
 });

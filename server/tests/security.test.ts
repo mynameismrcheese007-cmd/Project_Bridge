@@ -16,7 +16,7 @@ import { reportsRouter } from '../src/modules/reports/routes.js';
 import { rolesRouter } from '../src/modules/roles/routes.js';
 import { shareRouter } from '../src/modules/sharing/routes.js';
 import { encrypt } from '../src/lib/crypto.js';
-import { app, COMPLETE_PROJECT, createProject, createUser, PASSWORD, prisma, request, resetDb, signedInAgent } from './helpers.js';
+import { app, COMPLETE_PROJECT, createProject, createUser, PASSWORD, prisma, registerAndVerify, request, resetDb, signedInAgent } from './helpers.js';
 
 type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 interface Layer {
@@ -45,6 +45,8 @@ const ROUTES = MOUNTS.flatMap(([prefix, router]) =>
 const PUBLIC = new Set([
   'get /api/auth/config',
   'post /api/auth/register',
+  'post /api/auth/verify-email',
+  'post /api/auth/resend-verification',
   'post /api/auth/login',
   'post /api/auth/google',
   'post /api/auth/logout',
@@ -138,7 +140,7 @@ describe('Signed-in users and other people’s records', () => {
 describe('Role and status fields sent in a request body are ignored', () => {
   it('registration always creates an active Uploader', async () => {
     await resetDb();
-    const res = await request(app).post('/api/auth/register').send({ name: 'Eve Example', email: 'eve@example.com', password: PASSWORD, role: 'ADMIN', status: 'ACTIVE', isAdmin: true });
+    const res = await registerAndVerify({ name: 'Eve Example', email: 'eve@example.com', password: PASSWORD, role: 'ADMIN', status: 'ACTIVE', isAdmin: true } as never);
     expect(res.status).toBe(201);
     expect(await prisma.user.findUniqueOrThrow({ where: { email: 'eve@example.com' } })).toMatchObject({ role: 'UPLOADER', status: 'ACTIVE' });
   });

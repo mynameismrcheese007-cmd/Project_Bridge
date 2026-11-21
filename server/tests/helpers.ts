@@ -46,6 +46,7 @@ export async function resetDb() {
     prisma.projectMember.deleteMany(),
     prisma.project.deleteMany(),
     prisma.guestSession.deleteMany(),
+    prisma.pendingRegistration.deleteMany(),
     prisma.userProfile.deleteMany(),
     prisma.user.deleteMany(),
   ]);
@@ -63,6 +64,7 @@ export async function createUser(overrides: { role?: string; status?: string; em
       passwordHash: await bcrypt.hash(PASSWORD, 4),
       role: overrides.role ?? 'UPLOADER',
       status: overrides.status ?? 'ACTIVE',
+      emailVerifiedAt: new Date(),
     },
   });
 }
@@ -82,6 +84,22 @@ export function tokenFromLastResetMail(): string {
   const match = mail.text.match(/token=([A-Za-z0-9_-]+)/);
   if (!match) throw new Error('No token in email');
   return match[1];
+}
+
+/** Pulls the token from the most recent sign-up confirmation email. */
+export function tokenFromLastVerifyMail(): string {
+  const mail = [...mailer.outbox].reverse().find((m) => m.text.includes('/verify-email'));
+  if (!mail) throw new Error('No verification email');
+  const match = mail.text.match(/token=([A-Za-z0-9_-]+)/);
+  if (!match) throw new Error('No token in email');
+  return match[1];
+}
+
+/** Signs up, then uses the emailed link on `agent`, which ends up signed in. Returns the link's response. */
+export async function registerAndVerify(details: { name: string; email: string; password: string }, agent = request.agent(app)) {
+  const res = await agent.post('/api/auth/register').send(details);
+  if (res.status !== 202) throw new Error(`Sign-up failed for ${details.email}: ${res.status} ${JSON.stringify(res.body)}`);
+  return agent.post('/api/auth/verify-email').send({ token: tokenFromLastVerifyMail() });
 }
 
 export { prisma, request };

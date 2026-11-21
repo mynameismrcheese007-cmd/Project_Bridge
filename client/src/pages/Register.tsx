@@ -1,21 +1,20 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { api, ApiError } from '../api';
-import { useAuth } from '../auth/AuthContext';
 import { Alert } from '../components/Alert';
 import { AuthLayout } from '../components/AuthLayout';
 import { FormField, PasswordChecklist } from '../components/FormField';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { ResendVerification } from '../components/ResendVerification';
 import { emailProblem, nameProblem, passwordProblem } from '../passwordRules';
 import { Button } from '../components/ui/Button';
 
 export function Register() {
-  const { refresh } = useAuth();
-  const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [sentTo, setSentTo] = useState('');
 
   const update = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -38,17 +37,37 @@ export function Register() {
     }
     setSubmitting(true);
     try {
-      // Registering also signs the new account in.
+      // The account is created, and signed in, only when the emailed link is used (FR01).
       await api('/auth/register', { body: { name: form.name, email: form.email, password: form.password } });
-      await refresh();
-      navigate('/account', { replace: true });
+      setSentTo(form.email.trim().toLowerCase());
     } catch (err) {
       if (err instanceof ApiError) {
         setErrors(err.fields);
         setFormError(err.message);
       } else setFormError('Something went wrong.');
+    } finally {
       setSubmitting(false);
     }
+  }
+
+  if (sentTo) {
+    return (
+      <AuthLayout
+        title="Check your email"
+        subtitle="One more step before your account is ready."
+        footer={
+          <span>
+            Wrong address? <button type="button" className="link-button" onClick={() => setSentTo('')}>Sign up again</button>
+          </span>
+        }
+      >
+        <Alert tone="success">
+          We sent a link to <strong>{sentTo}</strong>. Open it within 24 hours to confirm your email and finish creating your account.
+        </Alert>
+        <p className="muted">Can't find it? Check your spam folder, or ask for a new link.</p>
+        <ResendVerification email={sentTo} />
+      </AuthLayout>
+    );
   }
 
   return (

@@ -37,6 +37,7 @@ import {
   resetDb,
   storage,
   tokenFromLastResetMail,
+  tokenFromLastVerifyMail,
 } from './helpers.js';
 import { expectCleanResponse, scanResponse } from './responseScan.js';
 
@@ -654,10 +655,24 @@ describe('Mutating routes', () => {
     expectCleanResponse(res.body, { values: [...secrets, email, cookieValue(res, SESSION_COOKIE)] });
   }
 
-  it('register', async () => {
+  it('register says only to check the email, and the link signs in cleanly', async () => {
     const res = await request(app).post('/api/auth/register').send({ name: 'New Person', email: 'new-person@example.com', password: PASSWORD });
-    expect(res.status).toBe(201);
-    expectCleanSignIn(res, 'new-person@example.com');
+    expect(res.status).toBe(202);
+    expect(fields(res.body)).toEqual(['message']);
+    const token = tokenFromLastVerifyMail();
+    expectCleanResponse(res.body, { values: [...secrets, 'new-person@example.com', token] });
+
+    const verified = await request(app).post('/api/auth/verify-email').send({ token });
+    expect(verified.status).toBe(201);
+    expectCleanSignIn(verified, 'new-person@example.com');
+    expectCleanResponse(verified.body, { values: [token] });
+  });
+
+  it('resend says the same whether or not a sign-up is waiting', async () => {
+    const resent = await request(app).post('/api/auth/resend-verification').send({ email: 'nobody-waiting@example.com' });
+    expect(resent.status).toBe(200);
+    expect(fields(resent.body)).toEqual(['message']);
+    expectCleanResponse(resent.body, { values: [...secrets, 'nobody-waiting@example.com'] });
   });
 
   it('login', async () => {

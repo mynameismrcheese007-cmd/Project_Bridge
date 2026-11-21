@@ -9,7 +9,7 @@ import { clearSessionCookie, setSessionCookie } from '../../middleware/session.j
 import { validateBody } from '../../middleware/validate.js';
 import { ACCEPTED_IMAGE_TYPES } from '../projects/media.js';
 import * as profile from './profile.js';
-import { emailOnlySchema, googleSchema, loginSchema, registerSchema, resetPasswordSchema } from './schemas.js';
+import { emailOnlySchema, googleSchema, loginSchema, registerSchema, resetPasswordSchema, tokenOnlySchema } from './schemas.js';
 import * as accounts from './service.js';
 
 /** FR01 / UC01: account access. */
@@ -42,10 +42,21 @@ accountsRouter.get('/config', (_req, res) => {
   res.json({ googleEnabled: Boolean(config.googleClientId) });
 });
 
+// FR01: sign-up only mails a link; the account and its session start when the link is used.
 accountsRouter.post('/register', authEmailLimiter, validateBody(registerSchema), async (req, res) => {
-  const { token, user } = await accounts.register(req.body);
+  await accounts.register(req.body);
+  res.status(202).json({ message: 'Check your email for a link to finish creating your account.' });
+});
+
+accountsRouter.post('/verify-email', authEmailLimiter, validateBody(tokenOnlySchema), async (req, res) => {
+  const { token, user } = await accounts.verifyEmail(req.body.token);
   setSessionCookie(res, token);
   res.status(201).json({ user: toSignInView(user) });
+});
+
+accountsRouter.post('/resend-verification', authEmailLimiter, validateBody(emailOnlySchema), async (req, res) => {
+  await accounts.resendVerification(req.body.email);
+  res.json({ message: 'If a sign-up is waiting for that email, a new link is on its way.' });
 });
 
 accountsRouter.post('/login', loginLimiter, validateBody(loginSchema), async (req, res) => {

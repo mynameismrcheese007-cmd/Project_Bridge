@@ -6,6 +6,7 @@ import { Alert } from '../components/Alert';
 import { AuthLayout } from '../components/AuthLayout';
 import { FormField } from '../components/FormField';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { ResendVerification } from '../components/ResendVerification';
 import { Button } from '../components/ui/Button';
 
 export function Login() {
@@ -57,6 +58,7 @@ export function Login() {
           {error.message}
         </Alert>
       )}
+      {error?.code === 'EMAIL_UNVERIFIED' && <ResendVerification email={email} />}
       <form className="form" onSubmit={handleSubmit} noValidate>
         <FormField
           label="Email"

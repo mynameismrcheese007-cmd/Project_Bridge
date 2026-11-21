@@ -15,18 +15,21 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String
   /// Null for accounts that only sign in with Google.
-  passwordHash String?
-  googleId     String?  @unique
+  passwordHash    String?
+  googleId        String?   @unique
   /// UPLOADER | PROFESSIONAL | ADMIN. New accounts are always UPLOADER (FR01).
-  role         String   @default("UPLOADER")
+  role            String    @default("UPLOADER")
   /// ACTIVE | RESTRICTED | SUSPENDED | BANNED (FR16).
-  status       String   @default("ACTIVE")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  status          String    @default("ACTIVE")
+  /// When the address was proven: by the sign-up link, or by Google. Accounts made before
+  /// verification existed were backfilled with their creation date.
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   sessions         Session[]
   emailTokens      EmailToken[]
@@ -270,6 +273,18 @@ model ProjectMedia {
   createdAt   DateTime @default(now())
 
   @@index([projectId, position])
+}
+
+/// A sign-up waiting for its email link (FR01). No User exists until the link is used, so an address
+/// nobody has proven never becomes an account. Signing up again replaces the earlier pending one.
+model PendingRegistration {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  tokenHash    String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
 }
 
 /// Anonymous browsing session used to enforce the Guest card cap (FR05).

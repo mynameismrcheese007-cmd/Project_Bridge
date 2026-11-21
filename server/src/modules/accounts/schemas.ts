@@ -62,3 +62,5 @@ export const googleSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({ token, password: newPassword });
+
+export const tokenOnlySchema = z.object({ token });

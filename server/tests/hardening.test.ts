@@ -371,9 +371,7 @@ describe('needs the database', () => {
 
   it('stores a registered password as a bcrypt hash and the session token only as its SHA-256', async () => {
     const email = `hardening-register-${stamp}@example.com`;
-    const res = await request(helpers.app)
-      .post('/api/auth/register')
-      .send({ name: 'Hardening Test', email, password: helpers.PASSWORD });
+    const res = await helpers.registerAndVerify({ name: 'Hardening Test', email, password: helpers.PASSWORD });
     expect(res.status).toBe(201);
 
     const user = await helpers.prisma.user.findUniqueOrThrow({ where: { email } });
@@ -384,6 +382,19 @@ describe('needs the database', () => {
     const session = await helpers.prisma.session.findFirstOrThrow({ where: { userId: user.id } });
     expect(session.tokenHash).toBe(hashToken(raw));
     expect(JSON.stringify(session)).not.toContain(raw);
+  });
+
+  it('stores a pending sign-up’s password as a bcrypt hash and its link token only as its SHA-256', async () => {
+    const email = `hardening-pending-${stamp}@example.com`;
+    expect((await request(helpers.app).post('/api/auth/register').send({ name: 'Hardening Test', email, password: helpers.PASSWORD })).status).toBe(202);
+
+    const raw = helpers.tokenFromLastVerifyMail();
+    const pending = await helpers.prisma.pendingRegistration.findUniqueOrThrow({ where: { email } });
+    expect(pending.passwordHash).toMatch(/^\$2[aby]\$\d{2}\$/);
+    expect(pending.tokenHash).toBe(hashToken(raw));
+    expect(JSON.stringify(pending)).not.toContain(raw);
+    expect(JSON.stringify(pending)).not.toContain(helpers.PASSWORD);
+    await helpers.prisma.pendingRegistration.delete({ where: { email } });
   });
 
   it('stores the reset token only as its SHA-256', async () => {

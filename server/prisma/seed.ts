@@ -79,7 +79,7 @@ async function main() {
     const user = await prisma.user.upsert({
       where: { email: a.email },
       update: { name: a.name, role: a.role, status: a.status, passwordHash },
-      create: { ...a, passwordHash },
+      create: { ...a, passwordHash, emailVerifiedAt: new Date() },
     });
     users[a.role === 'UPLOADER' ? 'uploader' : a.role === 'ADMIN' ? 'admin' : a.status === 'BANNED' ? 'banned' : 'pro'] = user.id;
   }
