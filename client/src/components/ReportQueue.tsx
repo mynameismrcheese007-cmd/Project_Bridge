@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { api, ApiError, type AdminReport } from '../api';
+import { usePagedList } from '../lib/usePagedList';
 import { Alert } from './Alert';
+import { LoadMore } from './LoadMore';
 import { TextDialog } from './TextDialog';
 import { TabPanel, Tabs } from './ui/Tabs';
 import { SkeletonList } from './ui/Skeleton';
@@ -15,30 +17,13 @@ type Status = AdminReport['status'];
  */
 export function ReportQueue() {
   const [status, setStatus] = useState<Status>('OPEN');
-  const [items, setItems] = useState<AdminReport[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { items: loaded, hasMore, loadingMore, loadMore, reload, error, setError } = usePagedList<AdminReport>(`/admin/reports?status=${status}`);
+  const items = loaded ?? [];
+  const loading = loaded === null && !error;
   const [dismissing, setDismissing] = useState<{ report: AdminReport; action: 'dismiss' | 'confirm' | 'remove' } | null>(null);
   const [evidence, setEvidence] = useState<{ reportId: string; items: Array<{ id: string; body: string | null; sender: { name: string }; createdAt: string }> } | null>(null);
   const [busy, setBusy] = useState(false);
   const [dialogError, setDialogError] = useState('');
-
-  const load = useCallback(async (s: Status) => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await api<{ items: AdminReport[] }>(`/admin/reports?status=${s}`);
-      setItems(res.items);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not load reports.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load(status);
-  }, [status, load]);
 
   async function dismiss(note: string) {
     if (!dismissing) return;
@@ -49,7 +34,7 @@ export function ReportQueue() {
       if (action === 'remove') await api(`/admin/projects/${report.targetId}/remove`, { body: { reason: note, reportId: report.id } });
       else await api(`/admin/reports/${report.id}/${action}`, { body: { note } });
       setDismissing(null);
-      await load(status);
+      await reload();
     } catch (err) {
       setDialogError(err instanceof ApiError ? err.message : 'Could not save the decision.');
     } finally {
@@ -148,7 +133,7 @@ export function ReportQueue() {
             )}
           </article>
         ))}
-
+      {!loading && <LoadMore hasMore={hasMore} loading={loadingMore} onClick={loadMore} />}
       </TabPanel>
 
       {dismissing && (

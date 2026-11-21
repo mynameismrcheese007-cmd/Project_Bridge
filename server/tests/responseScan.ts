@@ -15,7 +15,7 @@ export interface ScanOptions {
   values?: string[];
   /**
    * Exact paths left out of the scan, with [] for any array index. The two allowed emails are
-   * 'user.email' in /api/auth/me and 'submissions[].owner.email' and 'revisions[].owner.email' in the
+   * 'user.email' in /api/auth/me and 'submissions.items[].owner.email' and 'revisions.items[].owner.email' in the
    * Admin review queue. A test using this should also check the value it let through.
    */
   allow?: string[];

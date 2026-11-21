@@ -309,7 +309,7 @@ const GET_ROUTES: GetRoute[] = [
   { router: 'admin', path: '/ping', urls: () => ['/api/admin/ping'], statuses: adminOnly },
   { router: 'admin', path: '/reports', urls: () => ['/api/admin/reports'], statuses: adminOnly },
   { router: 'admin', path: '/reports/:id', urls: () => [`/api/admin/reports/${fixtureReport.id}`], statuses: adminOnly },
-  { router: 'admin', path: '/reviews', urls: () => ['/api/admin/reviews'], statuses: adminOnly, allow: ['submissions[].owner.email', 'revisions[].owner.email'] },
+  { router: 'admin', path: '/reviews', urls: () => ['/api/admin/reviews'], statuses: adminOnly, allow: ['submissions.items[].owner.email', 'revisions.items[].owner.email'] },
 ];
 
 const STRANGERS: readonly Viewer[] = ['guest', 'uploader', 'professional'];
@@ -584,14 +584,14 @@ describe('Exact field lists', () => {
 
     it('review queue: the owner’s name and email, and otherwise the content being reviewed', async () => {
       const { body } = await agents.admin.get('/api/admin/reviews');
-      const submission = body.submissions.find((s: { id: string }) => s.id === unpublished.SUBMITTED.id);
+      const submission = body.submissions.items.find((s: { id: string }) => s.id === unpublished.SUBMITTED.id);
       expect(fields(submission)).toEqual([
         'demoUrl', 'id', 'overview', 'owner', 'ownershipDeclaredAt', 'problem', 'screenshots', 'security', 'stage', 'submittedAt', 'summary', 'tags', 'title',
       ]);
       // The security audit is the verdict and its findings, nothing else.
       expect(fields(submission.security)).toEqual(['findings', 'verdict']);
       expect(submission.owner).toEqual({ name: users.owner.name, email: users.owner.email });
-      const revision = body.revisions.find((r: { projectId: string }) => r.projectId === live.id);
+      const revision = body.revisions.items.find((r: { projectId: string }) => r.projectId === live.id);
       expect(fields(revision)).toEqual(['current', 'id', 'owner', 'projectId', 'proposed', 'security', 'submittedAt']);
       expect(revision.owner).toEqual({ name: users.owner.name, email: users.owner.email });
       expect(fields(revision.proposed)).toEqual(['demoUrl', 'overview', 'problem', 'summary', 'tags', 'title']);
@@ -858,7 +858,7 @@ describe('Private screenshots', () => {
 
   it('the review queue signs only what is under review', async () => {
     const { res, requested } = await signedDuring(() => agents.admin.get('/api/admin/reviews'));
-    const submitted = (await Promise.all(res.body.submissions.map((s: { id: string }) => paths(s.id)))).flat().sort();
+    const submitted = (await Promise.all(res.body.submissions.items.map((s: { id: string }) => paths(s.id)))).flat().sort();
     expect(requested).toEqual(submitted);
   });
 

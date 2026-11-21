@@ -73,7 +73,7 @@ describe('Removing a project (FR14)', () => {
     expect((await admin.agent.post(`/api/admin/projects/${project.id}/re-review`).send({ reason: 'The owner replaced the copied parts.' })).status).toBe(200);
     expect((await prisma.project.findUniqueOrThrow({ where: { id: project.id } })).status).toBe('SUBMITTED');
     expect((await reporter.agent.get(`/api/projects/${project.id}`)).status).toBe(404);
-    expect((await admin.agent.get('/api/admin/reviews')).body.submissions.map((s: { id: string }) => s.id)).toContain(project.id);
+    expect((await admin.agent.get('/api/admin/reviews')).body.submissions.items.map((s: { id: string }) => s.id)).toContain(project.id);
   });
 });
 

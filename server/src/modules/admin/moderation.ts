@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { AuthUser } from '../../domain.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/errors.js';
+import { pageNumber, pageWindow, toPage } from '../../lib/paging.js';
 import { prisma, TX_OPTIONS } from '../../lib/prisma.js';
 import { readBody } from '../messaging/conversations.js';
 import { notify } from '../notifications/service.js';
@@ -40,17 +41,22 @@ export async function reReviewProject(admin: AuthUser, id: string, why: string) 
   }, TX_OPTIONS);
 }
 
-export async function listRemovedProjects() {
-  const rows = await prisma.project.findMany({ where: { status: 'REMOVED' }, orderBy: { removedAt: 'desc' }, select: { id: true, title: true, removedAt: true, owner: { select: { name: true } } } });
-  return { items: rows.map((p) => ({ id: p.id, title: p.title, removedAt: p.removedAt?.toISOString() ?? null, owner: { name: p.owner.name } })) };
+/** Newest removal first, the ones an Admin is most likely to look for. */
+export async function listRemovedProjects(page: number) {
+  const rows = await prisma.project.findMany({
+    where: { status: 'REMOVED' },
+    orderBy: [{ removedAt: 'desc' }, { id: 'desc' }],
+    select: { id: true, title: true, removedAt: true, owner: { select: { name: true } } },
+    ...pageWindow(page),
+  });
+  return toPage(rows, page, (p) => ({ id: p.id, title: p.title, removedAt: p.removedAt?.toISOString() ?? null, owner: { name: p.owner.name } }));
 }
 
 // ---------------------------------------------------------------- FR15, FR16: users, roles and access
 
-const USER_PAGE = 20;
 export const userListQuery = z.object({
   q: z.string().trim().max(100).default(''),
-  page: z.coerce.number().int().min(1).max(1000).default(1),
+  page: pageNumber,
 });
 
 /** Names, roles and statuses. No emails: an Admin acts on an account, not on an address. */
@@ -58,25 +64,24 @@ export async function listUsers({ q, page }: z.infer<typeof userListQuery>) {
   const rows = await prisma.user.findMany({
     where: q ? { name: { contains: q, mode: 'insensitive' } } : {},
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-    skip: (page - 1) * USER_PAGE,
-    take: USER_PAGE + 1,
     select: { id: true, name: true, role: true, status: true, createdAt: true },
+    ...pageWindow(page),
   });
-  return { page, items: rows.slice(0, USER_PAGE).map((u) => ({ ...u, createdAt: u.createdAt.toISOString() })), hasMore: rows.length > USER_PAGE };
+  return toPage(rows, page, (u) => ({ ...u, createdAt: u.createdAt.toISOString() }));
 }
 
 /** What was done to or by this account, newest first. */
-export async function userAudit(id: string) {
+export async function userAudit(id: string, page: number) {
   const user = await prisma.user.findUnique({ where: { id }, select: { id: true, name: true, role: true, status: true } });
   if (!user) throw new HttpError(404, 'NOT_FOUND', 'User not found.');
   const rows = await prisma.auditLog.findMany({
     where: { OR: [{ actorId: id }, { targetType: 'User', targetId: id }] },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-    take: 50,
+    ...pageWindow(page),
   });
   return {
     user,
-    items: rows.map((r) => ({ id: r.id, action: r.action, byThisUser: r.actorId === id, targetType: r.targetType, reason: r.reason, oldValue: r.oldValue, newValue: r.newValue, createdAt: r.createdAt.toISOString() })),
+    ...toPage(rows, page, (r) => ({ id: r.id, action: r.action, byThisUser: r.actorId === id, targetType: r.targetType, reason: r.reason, oldValue: r.oldValue, newValue: r.newValue, createdAt: r.createdAt.toISOString() })),
   };
 }
 
@@ -89,9 +94,14 @@ async function promote(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>
   await notify({ recipientId: userId, eventType: 'ROLE_CHANGED', message: 'You are now a Professional. You can like, comment and post offers.' }, tx);
 }
 
-export async function listRoleRequests() {
-  const rows = await prisma.roleRequest.findMany({ where: { status: 'PENDING' }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], include: { user: { select: { id: true, name: true, role: true, status: true } } } });
-  return { items: rows.map((r) => ({ id: r.id, reason: r.reason, createdAt: r.createdAt.toISOString(), user: r.user })) };
+export async function listRoleRequests(page: number) {
+  const rows = await prisma.roleRequest.findMany({
+    where: { status: 'PENDING' },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    include: { user: { select: { id: true, name: true, role: true, status: true } } },
+    ...pageWindow(page),
+  });
+  return toPage(rows, page, (r) => ({ id: r.id, reason: r.reason, createdAt: r.createdAt.toISOString(), user: r.user }));
 }
 
 export async function decideRoleRequest(admin: AuthUser, id: string, decision: 'APPROVED' | 'REJECTED', why: string) {

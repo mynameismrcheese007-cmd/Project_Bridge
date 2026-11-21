@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { OFFER_TYPES, type AuthUser } from '../../domain.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/errors.js';
+import { pageWindow, toPage } from '../../lib/paging.js';
 import { prisma, TX_OPTIONS } from '../../lib/prisma.js';
 import { notify } from '../notifications/service.js';
 import { loadProjectFor } from '../projects/access.js';
@@ -74,13 +75,14 @@ export async function closeOffer(user: AuthUser, id: string) {
 
 // ---------------------------------------------------------------- Admin review
 
-export async function listPendingOffers() {
+export async function listPendingOffers(page: number) {
   const rows = await prisma.paidOffer.findMany({
     where: { reviewStatus: 'PENDING' },
     orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     include: { project: { select: { id: true, title: true } }, author: { select: { name: true } } },
+    ...pageWindow(page),
   });
-  return { items: rows.map((o) => ({ ...toOfferView(o), project: o.project, author: { name: o.author.name } })) };
+  return toPage(rows, page, (o) => ({ ...toOfferView(o), project: o.project, author: { name: o.author.name } }));
 }
 
 /** The status change, audit row and author notice commit together, or not at all. */

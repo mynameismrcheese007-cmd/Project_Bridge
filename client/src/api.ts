@@ -177,27 +177,37 @@ export interface SecurityAudit {
   findings: SecurityFinding[];
 }
 
+/** One page of a paged list, as every paged Admin route returns it. */
+export interface Page<T> {
+  page: number;
+  items: T[];
+  hasMore: boolean;
+}
+
+export type ReviewSubmission = ProjectContent & {
+  id: string;
+  stage: Stage;
+  owner: { name: string; email: string };
+  submittedAt: string | null;
+  ownershipDeclaredAt: string | null;
+  screenshots: Array<{ id: string; url: string }>;
+  security: SecurityAudit;
+};
+
+export interface ReviewRevision {
+  id: string;
+  projectId: string;
+  owner: { name: string; email: string };
+  submittedAt: string;
+  current: ProjectContent;
+  proposed: ProjectContent;
+  security: SecurityAudit;
+}
+
+/** Each list is paged on its own (submissionsPage, revisionsPage). */
 export interface ReviewQueue {
-  submissions: Array<
-    ProjectContent & {
-      id: string;
-      stage: Stage;
-      owner: { name: string; email: string };
-      submittedAt: string | null;
-      ownershipDeclaredAt: string | null;
-      screenshots: Array<{ id: string; url: string }>;
-      security: SecurityAudit;
-    }
-  >;
-  revisions: Array<{
-    id: string;
-    projectId: string;
-    owner: { name: string; email: string };
-    submittedAt: string;
-    current: ProjectContent;
-    proposed: ProjectContent;
-    security: SecurityAudit;
-  }>;
+  submissions: Page<ReviewSubmission>;
+  revisions: Page<ReviewRevision>;
 }
 
 export interface AppNotification {

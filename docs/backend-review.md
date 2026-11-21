@@ -15,6 +15,8 @@ Strong already, and worth showing at the defence:
 
 ## 2. Bugs found during the review (fix first, small)
 
+The two paging bugs were fixed with step 7 on 22 Nov; the review queue now signs screenshots for one page only.
+
 | Bug | Where | Effect | Fix |
 |-----|-------|--------|-----|
 | Admin report queue shows only the first page | `client/src/components/ReportQueue.tsx` calls `/admin/reports?status=…` and ignores `hasMore` | With more than 20 open reports, the rest cannot be reached from the screen | Add "Load more" using `page`; part of step 7 |

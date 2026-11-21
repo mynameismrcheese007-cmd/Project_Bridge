@@ -36,11 +36,11 @@ describe('Revisions to published content', () => {
     expect(preview.body.showsPendingRevision).toBe(true);
 
     const queue = await adminAgent.get('/api/admin/reviews');
-    expect(queue.body.revisions).toHaveLength(1);
-    expect(queue.body.revisions[0].current.overview).toBe(project.overview);
-    expect(queue.body.revisions[0].proposed.overview).toBe(newOverview);
+    expect(queue.body.revisions.items).toHaveLength(1);
+    expect(queue.body.revisions.items[0].current.overview).toBe(project.overview);
+    expect(queue.body.revisions.items[0].proposed.overview).toBe(newOverview);
 
-    await adminAgent.post(`/api/admin/reviews/revisions/${queue.body.revisions[0].id}/approve`);
+    await adminAgent.post(`/api/admin/reviews/revisions/${queue.body.revisions.items[0].id}/approve`);
     view = await proAgent.get(`/api/projects/${project.id}`);
     expect(view.body.project.overview).toBe(newOverview);
   });

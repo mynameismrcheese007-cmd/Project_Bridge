@@ -94,7 +94,7 @@ describe('Audit in the review flow', () => {
     expect(await prisma.notification.count({ where: { recipientId: admin.id, eventType: 'SECURITY_ALERT' } })).toBe(0);
 
     const queue = await adminAgent.get('/api/admin/reviews');
-    expect(queue.body.submissions[0].security).toEqual({ verdict: 'WELL', findings: [] });
+    expect(queue.body.submissions.items[0].security).toEqual({ verdict: 'WELL', findings: [] });
     expect((await adminAgent.post(`/api/admin/reviews/projects/${id}/approve`)).status).toBe(200);
   });
 
@@ -108,8 +108,8 @@ describe('Audit in the review flow', () => {
     expect(JSON.stringify(ownerView.body)).not.toMatch(/DANGEROUS|DOWNLOAD_AND_RUN/);
 
     const queue = await adminAgent.get('/api/admin/reviews');
-    expect(queue.body.submissions[0].security.verdict).toBe('DANGEROUS');
-    expect(queue.body.submissions[0].security.findings[0]).toMatchObject({ code: 'DOWNLOAD_AND_RUN', field: 'overview' });
+    expect(queue.body.submissions.items[0].security.verdict).toBe('DANGEROUS');
+    expect(queue.body.submissions.items[0].security.findings[0]).toMatchObject({ code: 'DOWNLOAD_AND_RUN', field: 'overview' });
   });
 
   it('holds back approval of dangerous content until an Admin overrides with a reason', async () => {
@@ -131,7 +131,7 @@ describe('Audit in the review flow', () => {
     const { ownerAgent, adminAgent, id } = await setup({ demoUrl: 'https://bit.ly/solar-demo' });
     await ownerAgent.post(`/api/projects/${id}/submit`).send({ ownershipDeclared: true });
     const queue = await adminAgent.get('/api/admin/reviews');
-    expect(queue.body.submissions[0].security.verdict).toBe('SUSPICIOUS');
+    expect(queue.body.submissions.items[0].security.verdict).toBe('SUSPICIOUS');
     expect((await adminAgent.post(`/api/admin/reviews/projects/${id}/approve`)).status).toBe(200);
   });
 
@@ -145,7 +145,7 @@ describe('Audit in the review flow', () => {
     expect(await prisma.auditLog.findFirst({ where: { action: 'SECURITY_AUDIT', oldValue: revision.id } })).toMatchObject({ newValue: 'DANGEROUS', reason: 'SCRIPT_TAG' });
 
     const queue = await adminAgent.get('/api/admin/reviews');
-    expect(queue.body.revisions[0].security.verdict).toBe('DANGEROUS');
+    expect(queue.body.revisions.items[0].security.verdict).toBe('DANGEROUS');
     expect((await adminAgent.post(`/api/admin/reviews/revisions/${revision.id}/approve`)).status).toBe(409);
     expect((await prisma.project.findUniqueOrThrow({ where: { id } })).overview).toBe(COMPLETE_PROJECT.overview);
   });

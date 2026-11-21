@@ -1,6 +1,8 @@
+import { z } from 'zod';
 import type { AuthUser } from '../../domain.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/errors.js';
+import { pageNumber, pageWindow, toPage } from '../../lib/paging.js';
 import { prisma, TX_OPTIONS } from '../../lib/prisma.js';
 import { notify } from '../notifications/service.js';
 import { signScreenshots } from '../projects/media.js';
@@ -43,34 +45,43 @@ const content = (p: { title: string; summary: string; problem: string; overview:
   demoUrl: p.demoUrl,
 });
 
-export async function listReviews() {
+export const reviewListQuery = z.object({ submissionsPage: pageNumber, revisionsPage: pageNumber });
+
+/** Oldest first, each list paged on its own. Screenshots are signed only for the page shown. */
+export async function listReviews({ submissionsPage, revisionsPage }: z.infer<typeof reviewListQuery>) {
   const [submissions, revisions] = await Promise.all([
     prisma.project.findMany({
       where: { status: 'SUBMITTED' },
-      orderBy: { submittedAt: 'asc' },
+      orderBy: [{ submittedAt: 'asc' }, { id: 'asc' }],
       include: { owner: { select: { name: true, email: true } }, media: true },
+      ...pageWindow(submissionsPage),
     }),
     prisma.projectRevision.findMany({
       where: { status: 'PENDING', project: { status: { in: ['PUBLISHED', 'HIDDEN'] } } },
-      orderBy: { updatedAt: 'asc' },
+      orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
       include: { project: { include: { owner: { select: { name: true, email: true } } } } },
+      ...pageWindow(revisionsPage),
     }),
   ]);
 
+  const submissionPage = toPage(submissions, submissionsPage, (p) => p);
   return {
-    submissions: await Promise.all(
-      submissions.map(async (p) => ({
-        id: p.id,
-        ...content(p),
-        stage: p.stage,
-        owner: p.owner,
-        submittedAt: p.submittedAt?.toISOString() ?? null,
-        ownershipDeclaredAt: p.ownershipDeclaredAt?.toISOString() ?? null,
-        screenshots: await signScreenshots(p.media),
-        security: currentAudit(p),
-      })),
-    ),
-    revisions: revisions.map((r) => ({
+    submissions: {
+      ...submissionPage,
+      items: await Promise.all(
+        submissionPage.items.map(async (p) => ({
+          id: p.id,
+          ...content(p),
+          stage: p.stage,
+          owner: p.owner,
+          submittedAt: p.submittedAt?.toISOString() ?? null,
+          ownershipDeclaredAt: p.ownershipDeclaredAt?.toISOString() ?? null,
+          screenshots: await signScreenshots(p.media),
+          security: currentAudit(p),
+        })),
+      ),
+    },
+    revisions: toPage(revisions, revisionsPage, (r) => ({
       id: r.id,
       projectId: r.projectId,
       owner: r.project.owner,

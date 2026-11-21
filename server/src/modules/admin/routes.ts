@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { HttpError } from '../../lib/errors.js';
+import { pageQuery, parseQuery } from '../../lib/paging.js';
 import { param } from '../../lib/params.js';
 import { requirePermission, requireRole } from '../../middleware/auth.js';
 import { validateBody } from '../../middleware/validate.js';
@@ -19,8 +19,8 @@ adminRouter.get('/ping', (req, res) => {
   res.json({ ok: true, message: `Admin access granted to ${req.user!.name}.` });
 });
 
-adminRouter.get('/reviews', requirePermission('review'), async (_req, res) => {
-  res.json(await reviews.listReviews());
+adminRouter.get('/reviews', requirePermission('review'), async (req, res) => {
+  res.json(await reviews.listReviews(parseQuery(reviews.reviewListQuery, req.query)));
 });
 
 adminRouter.post('/reviews/projects/:id/approve', requirePermission('review'), validateBody(approvalSchema), async (req, res) => {
@@ -44,9 +44,7 @@ adminRouter.post('/reviews/revisions/:id/reject', requirePermission('review'), v
 });
 
 adminRouter.get('/reports', requirePermission('review'), async (req, res) => {
-  const parsed = reports.reportListQuery.safeParse(req.query);
-  if (!parsed.success) throw new HttpError(400, 'VALIDATION_ERROR', 'Invalid report filter.');
-  res.json(await reports.listReports(parsed.data));
+  res.json(await reports.listReports(parseQuery(reports.reportListQuery, req.query, 'Invalid report filter.')));
 });
 
 adminRouter.get('/reports/:id', requirePermission('review'), async (req, res) => {
@@ -67,8 +65,8 @@ adminRouter.get('/reports/:id/conversation', requirePermission('review'), async 
   res.json(await moderation.reportedConversation(req.user!, param(req, 'id')));
 });
 
-adminRouter.get('/offers', requirePermission('review'), async (_req, res) => {
-  res.json(await offers.listPendingOffers());
+adminRouter.get('/offers', requirePermission('review'), async (req, res) => {
+  res.json(await offers.listPendingOffers(parseQuery(pageQuery, req.query).page));
 });
 
 adminRouter.post('/offers/:id/approve', requirePermission('review'), async (req, res) => {
@@ -81,8 +79,8 @@ adminRouter.post('/offers/:id/reject', requirePermission('review'), validateBody
   res.json({ ok: true });
 });
 
-adminRouter.get('/projects/removed', requirePermission('removeProject'), async (_req, res) => {
-  res.json(await moderation.listRemovedProjects());
+adminRouter.get('/projects/removed', requirePermission('removeProject'), async (req, res) => {
+  res.json(await moderation.listRemovedProjects(parseQuery(pageQuery, req.query).page));
 });
 
 adminRouter.post('/projects/:id/remove', requirePermission('removeProject'), validateBody(moderation.removeProjectSchema), async (req, res) => {
@@ -96,13 +94,11 @@ adminRouter.post('/projects/:id/re-review', requirePermission('removeProject'), 
 });
 
 adminRouter.get('/users', requirePermission('controlAccess'), async (req, res) => {
-  const parsed = moderation.userListQuery.safeParse(req.query);
-  if (!parsed.success) throw new HttpError(400, 'VALIDATION_ERROR', 'Invalid user search.');
-  res.json(await moderation.listUsers(parsed.data));
+  res.json(await moderation.listUsers(parseQuery(moderation.userListQuery, req.query, 'Invalid user search.')));
 });
 
 adminRouter.get('/users/:id/audit', requirePermission('controlAccess'), async (req, res) => {
-  res.json(await moderation.userAudit(param(req, 'id')));
+  res.json(await moderation.userAudit(param(req, 'id'), parseQuery(pageQuery, req.query).page));
 });
 
 adminRouter.post('/users/:id/status', requirePermission('controlAccess'), validateBody(moderation.statusSchema), async (req, res) => {
@@ -110,8 +106,8 @@ adminRouter.post('/users/:id/status', requirePermission('controlAccess'), valida
   res.json({ ok: true });
 });
 
-adminRouter.get('/role-requests', requirePermission('changeRole'), async (_req, res) => {
-  res.json(await moderation.listRoleRequests());
+adminRouter.get('/role-requests', requirePermission('changeRole'), async (req, res) => {
+  res.json(await moderation.listRoleRequests(parseQuery(pageQuery, req.query).page));
 });
 
 adminRouter.post('/role-requests/:id/approve', requirePermission('changeRole'), validateBody(moderation.reasonSchema), async (req, res) => {

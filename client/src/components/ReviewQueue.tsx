@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, ApiError, STAGE_LABELS, type ProjectContent, type ReviewQueue as Queue, type SecurityAudit } from '../api';
+import { api, ApiError, STAGE_LABELS, type Page, type ProjectContent, type ReviewQueue as Queue, type SecurityAudit } from '../api';
 import { Alert } from './Alert';
+import { LoadMore } from './LoadMore';
 import { TextAreaField } from './FormControls';
 import { SkeletonList } from './ui/Skeleton';
 
@@ -128,6 +129,8 @@ export function ReviewQueue() {
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const [loadingMore, setLoadingMore] = useState<keyof Queue | null>(null);
+
   const load = useCallback(async () => {
     try {
       setQueue(await api<Queue>('/admin/reviews'));
@@ -135,6 +138,25 @@ export function ReviewQueue() {
       setMessage({ tone: 'error', text: err instanceof ApiError ? err.message : 'Could not load the review queue.' });
     }
   }, []);
+
+  /** Appends the next page of one list; the other list is left as it is. */
+  async function loadMore(list: keyof Queue) {
+    if (!queue) return;
+    setLoadingMore(list);
+    try {
+      const next = queue[list].page + 1;
+      const res = await api<Queue>(`/admin/reviews?${list === 'submissions' ? 'submissionsPage' : 'revisionsPage'}=${next}`);
+      setQueue((current) => {
+        if (!current) return current;
+        const merged = { ...res[list], items: [...current[list].items, ...res[list].items.filter((item) => !current[list].items.some((c) => c.id === item.id))] } as Page<never>;
+        return { ...current, [list]: merged };
+      });
+    } catch (err) {
+      setMessage({ tone: 'error', text: err instanceof ApiError ? err.message : 'Could not load more.' });
+    } finally {
+      setLoadingMore(null);
+    }
+  }
 
   useEffect(() => {
     void load();
@@ -158,12 +180,14 @@ export function ReviewQueue() {
 
   if (!queue) return message ? <Alert tone={message.tone}>{message.text}</Alert> : <SkeletonList rows={2} label="Loading review queue…" />;
 
-  const empty = queue.submissions.length === 0 && queue.revisions.length === 0;
+  const { submissions, revisions } = queue;
+  const empty = submissions.items.length === 0 && revisions.items.length === 0;
+  const shown = submissions.items.length + revisions.items.length;
 
   return (
     <section className="stack" aria-labelledby="queue-title">
       <h2 id="queue-title">
-        Review queue <span className="badge badge-navy">{queue.submissions.length + queue.revisions.length}</span>
+        Review queue <span className="badge badge-navy">{submissions.hasMore || revisions.hasMore ? `${shown}+` : shown}</span>
       </h2>
       {message && <Alert tone={message.tone}>{message.text}</Alert>}
       {empty && (
@@ -172,7 +196,7 @@ export function ReviewQueue() {
         </div>
       )}
 
-      {queue.submissions.map((s) => (
+      {submissions.items.map((s) => (
         <article key={s.id} className="card card-pad stack review-item">
           <div className="row space-between">
             <div className="row">
@@ -225,7 +249,9 @@ export function ReviewQueue() {
         </article>
       ))}
 
-      {queue.revisions.map((r) => {
+      <LoadMore hasMore={submissions.hasMore} loading={loadingMore === 'submissions'} onClick={() => loadMore('submissions')} />
+
+      {revisions.items.map((r) => {
         const changed = (Object.keys(FIELD_LABELS) as Array<keyof ProjectContent>).filter((f) => show(r.current[f]) !== show(r.proposed[f]));
         return (
           <article key={r.id} className="card card-pad stack review-item">
@@ -263,6 +289,7 @@ export function ReviewQueue() {
           </article>
         );
       })}
+      <LoadMore hasMore={revisions.hasMore} loading={loadingMore === 'revisions'} onClick={() => loadMore('revisions')} />
     </section>
   );
 }

@@ -87,8 +87,8 @@ describe('Submission and review', () => {
     const admin = await createUser({ role: 'ADMIN' });
     const adminAgent = await signedInAgent(admin.email);
     const queue = await adminAgent.get('/api/admin/reviews');
-    expect(queue.body.submissions.map((s: { id: string }) => s.id)).toEqual([body.id]);
-    expect(queue.body.submissions[0].ownershipDeclaredAt).not.toBeNull();
+    expect(queue.body.submissions.items.map((s: { id: string }) => s.id)).toEqual([body.id]);
+    expect(queue.body.submissions.items[0].ownershipDeclaredAt).not.toBeNull();
 
     expect((await adminAgent.post(`/api/admin/reviews/projects/${body.id}/approve`)).status).toBe(200);
     const feed = await request(app).get('/api/projects/feed');

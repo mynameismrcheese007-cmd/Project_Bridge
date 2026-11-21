@@ -4,15 +4,14 @@ import { REPORT_STATUSES, type AuthUser } from '../../domain.js';
 import { audit } from '../../lib/audit.js';
 import { decrypt } from '../../lib/crypto.js';
 import { HttpError } from '../../lib/errors.js';
+import { pageNumber, pageWindow, toPage } from '../../lib/paging.js';
 import { prisma, TX_OPTIONS } from '../../lib/prisma.js';
 import { notify } from '../notifications/service.js';
 import { REASON_CONTEXT } from '../reports/service.js';
 
-const PAGE_SIZE = 20;
-
 export const reportListQuery = z.object({
   status: z.enum(REPORT_STATUSES).default('OPEN'),
-  page: z.coerce.number().int().min(1).max(1000).default(1),
+  page: pageNumber,
 });
 
 /** A value that cannot be decrypted, for example after a key mix-up, must not take down the whole queue. */
@@ -43,10 +42,9 @@ export async function listReports({ status, page }: z.infer<typeof reportListQue
     where: { status },
     orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     include: REPORTER,
-    skip: (page - 1) * PAGE_SIZE,
-    take: PAGE_SIZE + 1,
+    ...pageWindow(page),
   });
-  return { page, items: rows.slice(0, PAGE_SIZE).map(reportView), hasMore: rows.length > PAGE_SIZE };
+  return toPage(rows, page, reportView);
 }
 
 export async function getReport(id: string) {

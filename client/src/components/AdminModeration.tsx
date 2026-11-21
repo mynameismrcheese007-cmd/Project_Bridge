@@ -1,23 +1,19 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { api, ApiError, OFFER_TYPE_LABELS, type AccountStatus, type Role } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { usePagedList } from '../lib/usePagedList';
 import { Alert } from './Alert';
+import { LoadMore } from './LoadMore';
 import { TextDialog } from './TextDialog';
 
 const errorText = (err: unknown) => (err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
 
-/** Loads a list, and runs a decision that needs a typed reason before reloading it. */
+/** Loads a paged list; `load` starts again from page 1 after a decision. */
 function useQueue<T>(path: string) {
-  const [items, setItems] = useState<T[] | null>(null);
-  const [error, setError] = useState('');
-  const load = useCallback(() => {
-    api<{ items: T[] }>(path)
-      .then((res) => setItems(res.items))
-      .catch((err) => setError(errorText(err)));
-  }, [path]);
-  useEffect(load, [load]);
-  return { items, error, setError, load };
+  const { items, hasMore, loadingMore, loadMore, reload, error, setError } = usePagedList<T>(path);
+  const more = <LoadMore hasMore={hasMore} loading={loadingMore} onClick={loadMore} />;
+  return { items, error, setError, load: reload, more };
 }
 
 interface Pending {
@@ -78,7 +74,7 @@ interface PendingOffer {
 
 /** FR11: paid offers wait here until an Admin approves or rejects them. */
 export function OfferQueue() {
-  const { items, error, setError, load } = useQueue<PendingOffer>('/admin/offers');
+  const { items, error, setError, load, more } = useQueue<PendingOffer>('/admin/offers');
   const { ask, dialog } = useDecision(load);
   const approve = (id: string) =>
     api(`/admin/offers/${id}/approve`, { method: 'POST' })
@@ -118,6 +114,7 @@ export function OfferQueue() {
           </div>
         </article>
       ))}
+      {more}
       {dialog}
     </section>
   );
@@ -132,7 +129,7 @@ interface RoleRequestRow {
 
 /** FR15: Uploaders asking for the Professional role. */
 export function RoleRequestQueue() {
-  const { items, error, load } = useQueue<RoleRequestRow>('/admin/role-requests');
+  const { items, error, load, more } = useQueue<RoleRequestRow>('/admin/role-requests');
   const { ask, dialog } = useDecision(load);
   const decide = (r: RoleRequestRow, action: 'approve' | 'reject') =>
     ask({
@@ -170,6 +167,7 @@ export function RoleRequestQueue() {
           </div>
         </article>
       ))}
+      {more}
       {dialog}
     </section>
   );
@@ -177,7 +175,7 @@ export function RoleRequestQueue() {
 
 /** FR14: removed projects. Re-review is the only way back. */
 export function RemovedProjects() {
-  const { items, error, load } = useQueue<{ id: string; title: string; removedAt: string | null; owner: { name: string } }>('/admin/projects/removed');
+  const { items, error, load, more } = useQueue<{ id: string; title: string; removedAt: string | null; owner: { name: string } }>('/admin/projects/removed');
   const { ask, dialog } = useDecision(load);
   if (!items?.length && !error) return null;
   return (
@@ -198,6 +196,7 @@ export function RemovedProjects() {
           </button>
         </article>
       ))}
+      {more}
       {dialog}
     </section>
   );
@@ -228,20 +227,15 @@ export function UserAccess() {
   const { user: me } = useAuth();
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
-  const { items, error, load } = useQueue<UserRow>(`/admin/users?q=${encodeURIComponent(search)}`);
+  const { items, error, load, more } = useQueue<UserRow>(`/admin/users?q=${encodeURIComponent(search)}`);
   const { ask, dialog } = useDecision(load);
-  const [history, setHistory] = useState<{ userId: string; items: AuditRow[] } | null>(null);
+  const [historyFor, setHistoryFor] = useState<string | null>(null);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setSearch(q.trim());
   };
-  const toggleHistory = (id: string) => {
-    if (history?.userId === id) return setHistory(null);
-    api<{ items: AuditRow[] }>(`/admin/users/${id}/audit`)
-      .then((res) => setHistory({ userId: id, items: res.items }))
-      .catch(() => undefined);
-  };
+  const toggleHistory = (id: string) => setHistoryFor((current) => (current === id ? null : id));
 
   return (
     <section className="stack" aria-labelledby="users-title">
@@ -285,30 +279,42 @@ export function UserAccess() {
                     {VERB[to]}
                   </button>
                 ))}
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => toggleHistory(u.id)} aria-expanded={history?.userId === u.id}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => toggleHistory(u.id)} aria-expanded={historyFor === u.id}>
                 History
               </button>
             </span>
           </div>
-          {history?.userId === u.id && (
-            <ul className="audit-list">
-              {history.items.length === 0 && <li className="muted small">No recorded activity.</li>}
-              {history.items.map((a) => (
-                <li key={a.id} className="small">
-                  <time className="muted" dateTime={a.createdAt}>
-                    {new Date(a.createdAt).toLocaleString()}
-                  </time>{' '}
-                  <code>{a.action}</code>
-                  {a.oldValue && ` ${a.oldValue} → ${a.newValue}`}
-                  {a.reason && ` · ${a.reason}`}
-                  {!a.byThisUser && <span className="muted"> (done to this account)</span>}
-                </li>
-              ))}
-            </ul>
-          )}
+          {historyFor === u.id && <AuditHistory userId={u.id} />}
         </article>
       ))}
+      {more}
       {dialog}
     </section>
+  );
+}
+
+/** What was done to or by one account, newest first, a page at a time. */
+function AuditHistory({ userId }: { userId: string }) {
+  const { items, hasMore, loadingMore, loadMore, error } = usePagedList<AuditRow>(`/admin/users/${userId}/audit`);
+  if (error) return <p className="field-error">{error}</p>;
+  if (!items) return null;
+  return (
+    <div className="stack">
+      <ul className="audit-list">
+        {items.length === 0 && <li className="muted small">No recorded activity.</li>}
+        {items.map((a) => (
+          <li key={a.id} className="small">
+            <time className="muted" dateTime={a.createdAt}>
+              {new Date(a.createdAt).toLocaleString()}
+            </time>{' '}
+            <code>{a.action}</code>
+            {a.oldValue && ` ${a.oldValue} → ${a.newValue}`}
+            {a.reason && ` · ${a.reason}`}
+            {!a.byThisUser && <span className="muted"> (done to this account)</span>}
+          </li>
+        ))}
+      </ul>
+      <LoadMore hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
+    </div>
   );
 }
