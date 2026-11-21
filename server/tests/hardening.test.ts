@@ -135,6 +135,23 @@ describe('HTTPS redirect', () => {
   });
 });
 
+describe('Google sign-in has one setting', () => {
+  it('tells the client the id the server accepts, so the button shows exactly then', async () => {
+    const app = await loadApp({ ...TEST_ENV, GOOGLE_CLIENT_ID: 'one-id.apps.googleusercontent.com' });
+    const res = await request(app).get('/api/auth/config');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ googleEnabled: true, googleClientId: 'one-id.apps.googleusercontent.com' });
+  });
+
+  it('says it is off when the server has no id, and refuses Google sign-ins to match', async () => {
+    const app = await loadApp({ ...TEST_ENV, GOOGLE_CLIENT_ID: '' });
+    expect((await request(app).get('/api/auth/config')).body).toEqual({ googleEnabled: false, googleClientId: null });
+    const google = await request(app).post('/api/auth/google').send({ credential: 'google:anyone'.padEnd(30, 'x') });
+    expect(google.status).toBe(503);
+    expect(google.body.error.code).toBe('GOOGLE_DISABLED');
+  });
+});
+
 describe('HSTS', () => {
   it('is sent in production', async () => {
     const res = await request(await loadApp(PROD_ENV)).get('/api/health').set('X-Forwarded-Proto', 'https');

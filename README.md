@@ -20,7 +20,7 @@ A platform connecting university projects with industry support. This is the CSE
 You need Node.js 20 or newer (tested on 24) and git.
 
 ```bash
-# Get server/.env and client/.env from the team lead (they hold the database password). Never commit them.
+# Get server/.env from the team lead (it holds the database password). Never commit it. The client needs no .env.
 npm install             # also builds the Prisma client
 npm run dev             # API on :4000, web app on http://localhost:5173
 npm test                # the automated tests (they use a separate test schema)
@@ -64,12 +64,10 @@ Until these are set, everything works except uploads, which return "Screenshot u
 1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services.
 2. Under **OAuth consent screen**, choose External and fill in the app name and support email. Add your teammates as test users while the app is in "Testing".
 3. Under **Credentials → Create credentials → OAuth client ID**, choose Web application. Under Authorized JavaScript origins, add `http://localhost:5173`, and the deployed URL later.
-4. Copy the client ID into **both** files:
-   - `server/.env`: `GOOGLE_CLIENT_ID=...apps.googleusercontent.com`
-   - `client/.env`: `VITE_GOOGLE_CLIENT_ID=` with the same value
+4. Put the client ID in `server/.env` only: `GOOGLE_CLIENT_ID=...apps.googleusercontent.com`. The button asks the server (`GET /api/auth/config`), so there is nothing to set in the client.
 5. Restart `npm run dev`. The Google button appears on the Sign in and Register pages, and stays hidden while the ID is empty.
 
-New Google users become **Uploaders**. If a Google email matches an existing account, Google is linked to that account and its role is unchanged, but linking removes any existing password, signs out all existing sessions and cancels unused password-reset links. This is because registration does not verify email addresses, so someone else may have registered that address first, and they should not keep a way in once the Google user arrives. The Google user can set a new password through forgot-password. Suspended and banned accounts are refused before anything is linked.
+New Google users become **Uploaders**, and creating one needs the Content policy box ticked on the sign-up page. If a Google email matches an existing account, Google is linked to that account and its role is unchanged, but linking removes any existing password, signs out all existing sessions and cancels unused password-reset links. Sign-up now confirms the address by email, but accounts made before that never proved it, so someone else may have registered that address first, and they should not keep a way in once the Google user arrives. The Google user can set a new password through forgot-password. Suspended and banned accounts are refused before anything is linked.
 
 Known gaps in linking: team members added to the account's projects before linking stay on them. A different Google account with the same email replaces the existing link, and a sign-in by the previously linked Google account in flight at that moment can keep its session for up to 7 days; whether a link may be replaced at all is still undecided.
 

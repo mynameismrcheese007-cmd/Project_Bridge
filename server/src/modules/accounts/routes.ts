@@ -37,9 +37,14 @@ const cover: RequestHandler = (req, res, next) => {
   });
 };
 
-/** Tells the client which sign-in options this server supports. */
+/**
+ * Tells the client which sign-in options this server supports, so the Google button shows exactly
+ * when the server accepts Google sign-ins. The client id is public by design: Google puts it in
+ * every sign-in page.
+ */
 accountsRouter.get('/config', (_req, res) => {
-  res.json({ googleEnabled: Boolean(config.googleClientId) });
+  const googleClientId = config.googleClientId || null;
+  res.json({ googleEnabled: googleClientId !== null, googleClientId });
 });
 
 // FR01: sign-up only mails a link; the account and its session start when the link is used.

@@ -19,7 +19,7 @@ cd server && npx vitest run tests/<file>.test.ts   # one file
 cd server && npx tsc --noEmit && cd ../client && npx tsc --noEmit   # typecheck both
 ```
 
-`server/.env` and `client/.env` are not in git; get them privately from the team lead. Never commit them, print their values, or paste them into a chat. Everyone sharing the database must use the same `ENCRYPTION_KEYS`, or encrypted text (report reasons, contact introductions) reads as blank.
+`server/.env` is not in git; get it privately from the team lead. Never commit it, print its values, or paste them into a chat. The client needs no `.env`: the Google button reads `GET /api/auth/config`, so `GOOGLE_CLIENT_ID` in `server/.env` is the only Google setting. Everyone sharing the database must use the same `ENCRYPTION_KEYS`, or encrypted text (report reasons, contact introductions) reads as blank.
 
 Demo accounts (password `Password123!`): `admin@projectbridge.test` (Sourav, Admin), `pro@projectbridge.test` (Shehzad, Professional), `uploader@projectbridge.test` (Rakibul, Uploader), `banned@projectbridge.test` (Pushy, banned).
 

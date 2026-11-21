@@ -4,7 +4,6 @@ import { api, ApiError } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Alert } from './Alert';
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
 
 interface GoogleIdApi {
@@ -29,6 +28,21 @@ declare global {
 }
 
 let scriptPromise: Promise<void> | undefined;
+let clientIdPromise: Promise<string | null> | undefined;
+
+/**
+ * The server decides whether Google sign-in is on and which client id to use, so the button can never
+ * show while the server refuses Google sign-ins, or hide while it accepts them. Asked once per page load.
+ */
+function loadGoogleClientId(): Promise<string | null> {
+  clientIdPromise ??= api<{ googleEnabled: boolean; googleClientId: string | null }>('/auth/config')
+    .then((res) => (res.googleEnabled ? res.googleClientId : null))
+    .catch(() => {
+      clientIdPromise = undefined;
+      return null;
+    });
+  return clientIdPromise;
+}
 
 function loadGoogleScript(): Promise<void> {
   scriptPromise ??= new Promise((resolve, reject) => {
@@ -55,18 +69,29 @@ export function GoogleSignInButton({ text = 'signin_with', acceptPolicy = false 
   const navigate = useNavigate();
   const container = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
+  const [clientId, setClientId] = useState<string | null>(null);
   // Read when Google answers, so ticking the box after the button is drawn still counts.
   const accepted = useRef(acceptPolicy);
   accepted.current = acceptPolicy;
 
   useEffect(() => {
-    if (!CLIENT_ID) return;
+    let cancelled = false;
+    void loadGoogleClientId().then((id) => {
+      if (!cancelled) setClientId(id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!clientId) return;
     let cancelled = false;
     loadGoogleScript()
       .then(() => {
         if (cancelled || !container.current || !window.google) return;
         window.google.accounts.id.initialize({
-          client_id: CLIENT_ID,
+          client_id: clientId,
           context: text === 'signup_with' ? 'signup' : 'signin',
           // Chrome now shows One Tap through FedCM, the browser's built-in account chooser.
           use_fedcm_for_prompt: true,
@@ -103,9 +128,9 @@ export function GoogleSignInButton({ text = 'signin_with', acceptPolicy = false 
       // Leaving the sign-in page closes the chooser.
       window.google?.accounts.id.cancel();
     };
-  }, [navigate, refresh, text]);
+  }, [clientId, navigate, refresh, text]);
 
-  if (!CLIENT_ID) return null;
+  if (!clientId) return null;
 
   return (
     <div className="google-signin">

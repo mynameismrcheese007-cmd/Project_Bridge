@@ -34,7 +34,7 @@ The two paging bugs were fixed with step 7 on 22 Nov; the review queue now signs
 | M3 | Tests on every push (GitHub Actions) | NFR-M3; also shows evidence of testing at the defence | 10 |
 | M4 | Change password while signed in | **Done 22 Nov:** `POST /api/auth/me/password` and a form on the account page | New, below |
 | M5 | Clean shutdown and a health check that touches the database | **Done 22 Nov:** `/api/health` answers 503 when the database does not reply within 5 s; SIGTERM and SIGINT finish open requests (up to 10 s), stop the timers and close the database before exiting | New, below |
-| M6 | One source for the Google button | It can show while the server has Google sign-in off, or the reverse | 9 |
+| M6 | One source for the Google button | **Done 22 Nov** | 9 |
 
 ### Should (makes the project noticeably more solid)
 
