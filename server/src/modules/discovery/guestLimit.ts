@@ -32,7 +32,7 @@ export async function getGuestSession(req: Request, res: Response) {
     sameSite: 'lax',
     secure: config.isProd,
     path: '/',
-    maxAge: 30 * 24 * 60 * 60 * 1000,
+    maxAge: config.guestSessionTtlMs,
   });
   return prisma.guestSession.create({ data: { tokenHash: hashToken(token) } });
 }

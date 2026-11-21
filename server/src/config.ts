@@ -35,6 +35,8 @@ export const config = {
   contactRateLimit: int('CONTACT_RATE_LIMIT', 10),
   messageRateLimit: int('MESSAGE_RATE_LIMIT', 60),
   guestCardLimit: 20,
+  /** Lifetime of the guest cookie; a guest session older than this can never be used again. */
+  guestSessionTtlMs: 30 * 24 * 60 * 60 * 1000,
   feedPageSize: 10,
   /** Screenshots and cover images (FR02): optional, stored in Supabase Storage. */
   media: {

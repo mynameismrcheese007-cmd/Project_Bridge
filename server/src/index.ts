@@ -1,5 +1,6 @@
 import { createApp } from './app.js';
 import { config } from './config.js';
+import { scheduleCleanup } from './lib/cleanup.js';
 import { assertEncryptionConfigured } from './lib/crypto.js';
 import { keepConnectionsAlive } from './lib/prisma.js';
 
@@ -29,4 +30,5 @@ createApp().listen(config.port, (error?: Error) => {
   }
   console.log(`ProjectBridge API listening on http://localhost:${config.port}`);
   keepConnectionsAlive();
+  scheduleCleanup();
 });
