@@ -41,7 +41,8 @@ Demo accounts (password `Password123!`): `admin@projectbridge.test` (Sourav, Adm
 - Do not change the shared database without asking the team lead first. That includes `prisma migrate deploy`, `prisma migrate dev` and `npm run setup`.
 - To add a migration: edit `server/prisma/schema.prisma`, create `server/prisma/migrations/<timestamp>_<name>/migration.sql` with `npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script` (run in `server/`, it only reads the database), then append `ALTER TABLE "<Table>" ENABLE ROW LEVEL SECURITY;` for each new table. Tests do not use migrations, so never rely on raw SQL constraints.
 - `DATABASE_URL` must use the session pooler (port 5432) with a small `connection_limit` (3). The transaction pooler (port 6543) took 20 seconds or more to connect and often failed. Dropped connections can leave sessions stuck "idle in transaction" on the database, which use up the pooler's slots and make every request queue; check `pg_stat_activity` when the app turns slow.
-- The connection to Supabase is often slow or drops for minutes. `server/src/lib/prisma.ts` raises the timeouts and retries plain reads. In tests, errors such as `Can't reach database server`, P1001, P1008, P1017, P2024, P2028 or "Hook timed out" are almost always the connection, not the code. Check with a `SELECT 1` before debugging, and rerun just the affected file. Running the suite with fewer connections helps: set `connection_limit=5` on `TEST_DATABASE_URL` for that run.
+- The connection to Supabase is often slow or drops for minutes. `server/src/lib/prisma.ts` gives up on a dead connection after 6 seconds, retries plain reads, and the API server pings every pooled connection every 3 minutes (`keepConnectionsAlive`) so the pooler does not close them while idle. Do not raise `socket_timeout` again: long timeouts are what made the first request after a quiet spell take 90 seconds.
+- The API server also runs `server/src/lib/cleanup.ts` at start-up and hourly. It deletes expired sign-ins, expired email links and guest sessions older than the guest cookie. Never delete guest sessions sooner, or a guest gets a fresh card budget. In tests, errors such as `Can't reach database server`, P1001, P1008, P1017, P2024, P2028 or "Hook timed out" are almost always the connection, not the code. Check with a `SELECT 1` before debugging, and rerun just the affected file. Running the suite with fewer connections helps: set `connection_limit=5` on `TEST_DATABASE_URL` for that run.
 
 ## Test-suite tripwires
 
@@ -67,6 +68,8 @@ Decisions worth knowing:
 - The share page `/p/:id` is served by the API server; Vite proxies `/p` in development.
 
 What is left is polish and acceptance testing: click through each screen, fix what looks wrong, and keep the tests passing.
+
+The current plan, backend performance findings and unpushed work are in `docs/next-steps.md`. Read it before starting a step.
 
 ## Git
 
