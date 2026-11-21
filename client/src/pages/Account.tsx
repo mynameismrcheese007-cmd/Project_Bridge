@@ -130,7 +130,8 @@ function CoverPhoto({ url, canEdit, onChange }: { url: string | null; canEdit: b
   }
 
   return (
-    <div className="profile-cover" style={url ? { backgroundImage: `url("${url}")` } : undefined}>
+    <div className={url ? 'profile-cover has-image' : 'profile-cover'} style={url ? { backgroundImage: `url("${url}")` } : undefined}>
+      {!url && <span className="annotation profile-cover-empty">No cover photo</span>}
       {canEdit && (
         <div className="profile-cover-actions">
           <input ref={input} type="file" accept={COVER_TYPES.join(',')} onChange={choose} hidden aria-hidden="true" tabIndex={-1} />

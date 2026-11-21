@@ -627,14 +627,27 @@
 .profile-card {
   overflow: hidden;
 }
+/* An empty cover is a quiet drafting grid; a real photo replaces it. */
 .profile-cover {
   position: relative;
   height: 180px;
-  background: linear-gradient(120deg, var(--navy), var(--accent));
+  border-bottom: 1px solid var(--line);
+  background-color: var(--paper-2);
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.profile-cover.has-image {
+  background-color: var(--paper-2);
   background-size: cover;
   background-position: center;
 }
-.profile-cover-actions {
+.profile-cover-empty {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+}.profile-cover-actions {
   position: absolute;
   right: 12px;
   bottom: 12px;
