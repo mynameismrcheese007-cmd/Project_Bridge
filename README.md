@@ -86,6 +86,10 @@ The password for every seeded account is **`Password123!`**.
 | uploader@projectbridge.test | Uploader | Active |
 | banned@projectbridge.test | Professional | **Banned** |
 
+## Sharing work in the team
+
+Whoever pushes runs the full checks first; whoever pulls just runs `npm install` and carries on. The checklists and the shared-database rules are in [docs/team-workflow.md](docs/team-workflow.md).
+
 ## Project structure
 
 ```

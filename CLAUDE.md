@@ -79,3 +79,4 @@ The current plan, backend performance findings and unpushed work are in `docs/ne
 
 - Remote: https://github.com/NiyamulGoni/Project_Bridge (branch `master`). Pull before you start.
 - Commit and push only when the person you are working for asks. Write commit messages that say what changed and why.
+- Team agreement (`docs/team-workflow.md`): whoever pushes runs both typechecks and the full suite first and says so with the totals; whoever pulls only runs `npm install` and does not re-test. Before a push, run the full suite and report its result; if it could not finish, say so.
