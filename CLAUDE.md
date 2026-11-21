@@ -70,7 +70,7 @@ Decisions worth knowing:
 
 What is left is polish and acceptance testing: click through each screen, fix what looks wrong, and keep the tests passing.
 
-The current plan, backend performance findings and unpushed work are in `docs/next-steps.md`. Read it before starting a step.
+The current plan, backend performance findings and unpushed work are in `docs/next-steps.md`. Read it before starting a step. `docs/backend-review.md` has the detailed plan for steps 6 to 10 and the extra must and should items (M1–M6, S1–S6).
 
 ## Git
 
