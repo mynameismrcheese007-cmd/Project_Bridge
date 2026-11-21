@@ -14,7 +14,7 @@ Owners follow the team roles: Shezad (backend), Riyad (frontend), Rakibul (test/
 | Database stall | Fixed on branch `fix/db-stall` (first request after 15 idle minutes: 2.4 s, was 91 s; all 1138 tests pass): `socket_timeout` 15 → 6 s, `pool_timeout` 40 → 15 s, transaction `maxWait` 40 → 15 s, and a `SELECT 1` per pooled connection every 3 minutes. Worst case for a read drops from about 85 s to 33 s, and the ping should stop the stall happening at all. |
 | Session cleanup | Done on branch `fix/db-stall`: `server/src/lib/cleanup.ts` runs at start-up and hourly, deleting expired sign-ins, expired email links and guest sessions older than the 30-day guest cookie. Guest sessions were already created only by the feed, search and project view, which need them to count cards, so that part needed no change. |
 | Admin list paging | Done (step 7, 22 Nov): every Admin list pages 20 at a time through `server/src/lib/paging.ts`, and every Admin screen has "Load more" (`client/src/lib/usePagedList.ts`). This also fixed the report queue and user list, which showed only their first page. |
-| Screenshot links | `storage.ts` asks Supabase for a new signed link on every view. |
+| Screenshot links | Done (step 8, 22 Nov): `SignedUrlCache` in `server/src/lib/storage.ts` reuses each link while more than half its 15 minutes remain. A project page with 3 screenshots went from 1.8 s to about 0.6 s on repeat views. |
 | Google button | Two sources: the server uses `GOOGLE_CLIENT_ID` (`/api/auth/config`), the client uses `VITE_GOOGLE_CLIENT_ID`. They can disagree. |
 | CI (NFR-M3) | Missing. No `.github/workflows`. |
 | Final docs | Missing: deployment guide, backup steps, load test, accessibility and usability records. |
@@ -37,7 +37,7 @@ Step 4's migration adds `User.emailVerifiedAt` (backfilled for every existing ac
 |---|------|-------|-----------|
 | 6 | Content policy page and copyright report option (NFR-L1) | Riyad + Shezad | **Built 22 Nov.** `/policy` page and footer link; required tick box at sign-up (also for Google); seven report categories; copyright reports need the ownership statement and allow a link; Admin queue shows and filters by category |
 | 7 | Page limits on the remaining admin lists | Shezad | **Done 22 Nov.** Review queue (submissions and changes paged separately), offers, removed projects, role requests and account history load 20 at a time; `tests/adminPaging.test.ts` covers every list |
-| 8 | Reuse screenshot links | Shezad | Signed links cached in memory until a minute before expiry; project page makes no Storage call on a second view |
+| 8 | Reuse screenshot links | Shezad | **Done 22 Nov.** Links reused while over half their lifetime remains (the gallery loads lazily), dropped when a file is removed; `tests/signedUrlCache.test.ts` |
 | 9 | One source for the Google button | Riyad | Client asks `/api/auth/config` only; `VITE_GOOGLE_CLIENT_ID` removed or used only as the button's client id when the server says enabled |
 | 10 | CI on every push (NFR-M3) | Rakibul | GitHub Action runs install, both typechecks and the test suite against a test database secret; badge in README; master protected so a red run blocks merging |
 | 11 | Full UI pass | Riyad + Rakibul | Every page checked as Guest, Uploader, Professional, Admin and banned, in light and dark, at 375 px; findings fixed or listed in `docs/ui-redesign/AUDIT.md` |

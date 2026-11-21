@@ -14,6 +14,46 @@ export interface MediaStorage {
   publicUrl(path: string): string;
 }
 
+/**
+ * Reuses signed URLs, so a page view does not ask Supabase to sign every screenshot again. A link is
+ * reused only while more than half its lifetime remains, because the gallery loads images lazily and
+ * a page may stay open a while; after that, or once the file is removed, it is signed afresh. In-flight
+ * signings are shared, and the oldest entries go first once `max` is reached.
+ */
+export class SignedUrlCache {
+  private entries = new Map<string, { url: Promise<string | null>; reuseUntil: number }>();
+
+  constructor(
+    private sign: (path: string) => Promise<string | null>,
+    private ttlMs: number,
+    private max = 2000,
+    private now = () => Date.now(),
+  ) {}
+
+  get(path: string): Promise<string | null> {
+    const hit = this.entries.get(path);
+    if (hit && hit.reuseUntil > this.now()) return hit.url;
+    this.entries.delete(path);
+    const url = this.sign(path);
+    this.entries.set(path, { url, reuseUntil: this.now() + this.ttlMs / 2 });
+    // A failed signing is not kept, so the next view tries again.
+    const drop = () => {
+      if (this.entries.get(path)?.url === url) this.entries.delete(path);
+    };
+    url.then((u) => u === null && drop(), drop);
+    while (this.entries.size > this.max) this.entries.delete(this.entries.keys().next().value!);
+    return url;
+  }
+
+  forget(paths: string[]): void {
+    for (const p of paths) this.entries.delete(p);
+  }
+
+  get size(): number {
+    return this.entries.size;
+  }
+}
+
 function notConfigured(): never {
   throw new HttpError(
     503,
@@ -24,6 +64,7 @@ function notConfigured(): never {
 
 class SupabaseStorage implements MediaStorage {
   private client: SupabaseClient | undefined;
+  private signed = new SignedUrlCache((path) => this.sign(path), config.media.signedUrlTtlSeconds * 1000);
 
   constructor(private bucketName: string) {}
 
@@ -42,11 +83,16 @@ class SupabaseStorage implements MediaStorage {
 
   async remove(paths: string[]) {
     if (paths.length === 0) return;
+    this.signed.forget(paths);
     const { error } = await this.bucket().remove(paths);
     if (error) throw new Error(`Storage delete failed: ${error.message}`);
   }
 
-  async signedUrl(path: string) {
+  signedUrl(path: string) {
+    return this.signed.get(path);
+  }
+
+  private async sign(path: string) {
     if (!config.media.supabaseUrl || !config.media.supabaseServiceKey) return null;
     const { data, error } = await this.bucket().createSignedUrl(path, config.media.signedUrlTtlSeconds);
     if (error) {

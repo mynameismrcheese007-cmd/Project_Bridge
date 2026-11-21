@@ -40,7 +40,7 @@ The two paging bugs were fixed with step 7 on 22 Nov; the review queue now signs
 
 | # | Work | Why |
 |---|------|-----|
-| S1 | Reuse screenshot links until they expire (step 8) | Faster project pages and review queue |
+| S1 | Reuse screenshot links until they expire (step 8) | **Done 22 Nov** |
 | S2 | "Sign out other devices" on the account page | Users can end a session left open elsewhere; one `deleteMany` |
 | S3 | Delete my account | Expected for personal data; keep audit rows, remove or anonymise the rest |
 | S4 | Admin overview counts | One request returning how many submissions, revisions, reports, offers and role requests are waiting; badges on the Admin tabs |
